@@ -1,7 +1,7 @@
 {
   "name": "obnicode",
   "displayName": "ObniCode",
-  "description": "Execute YAML-defined Explorer view actions and document formatters.",
+  "description": "Execute YAML-defined Explorer view actions, startup background tasks, and document formatters.",
   "version": "0.1.0",
   "publisher": "local",
   "engines": {
@@ -60,7 +60,7 @@
         "obnicode.configFile": {
           "type": "string",
           "default": ".vscode/obnicode.yaml",
-          "description": "Workspace-relative YAML configuration file containing Explorer view actions and document formatter commands."
+          "description": "Workspace-relative YAML configuration file containing Explorer view actions, startup background tasks, and document formatter commands."
         },
         "obnicode.systemStatus.enabled": {
           "type": "boolean",

@@ -25,8 +25,18 @@ interface FormatterConfig {
   match?: unknown;
 }
 
+interface BackgroundTaskConfig {
+  name?: unknown;
+  command?: unknown;
+  cwd?: unknown;
+  outputChannel?: unknown;
+  terminalName?: unknown;
+  useTerminal?: unknown;
+}
+
 interface ObniCodeConfig {
   explorerViewActions?: unknown;
+  backgroundTasks?: unknown;
   formatters?: unknown;
 }
 
@@ -50,6 +60,15 @@ interface Formatter extends MatchableConfig {
   languages: string[];
   command: string;
   cwd?: string;
+}
+
+interface BackgroundTask {
+  name: string;
+  command: string;
+  cwd?: string;
+  outputChannel: string;
+  terminalName?: string;
+  useTerminal: boolean;
 }
 
 type TemplateVariables = Record<string, string>;
@@ -106,6 +125,12 @@ export function activate(context: vscode.ExtensionContext): void {
     explorerViewActionOutput
   );
   startSystemStatusBar(context);
+  void startBackgroundTasks(context).catch((error) => {
+    const output = vscode.window.createOutputChannel('obnicode.backgroundTasks');
+    context.subscriptions.push(output);
+    const message = error instanceof Error ? error.message : String(error);
+    output.appendLine(`[${new Date().toISOString()}] ERROR failed to start background tasks: ${message}`);
+  });
 }
 
 async function setupExampleConfigs(context: vscode.ExtensionContext): Promise<void> {
@@ -134,6 +159,141 @@ async function setupExampleConfigs(context: vscode.ExtensionContext): Promise<vo
   await fs.promises.mkdir(path.dirname(target), { recursive: true });
   await fs.promises.copyFile(source, target);
   vscode.window.showInformationMessage(`ObniCode example configuration written: ${relativeTarget}`);
+}
+
+async function startBackgroundTasks(context: vscode.ExtensionContext): Promise<void> {
+  const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
+  if (workspaceFolders.length === 0) {
+    return;
+  }
+
+  const outputChannels = new Map<string, vscode.OutputChannel>();
+  const getOutputChannel = (name: string): vscode.OutputChannel => {
+    const existing = outputChannels.get(name);
+    if (existing) {
+      return existing;
+    }
+
+    const output = vscode.window.createOutputChannel(name);
+    outputChannels.set(name, output);
+    context.subscriptions.push(output);
+    return output;
+  };
+
+  const startupOutput = getOutputChannel('obnicode.backgroundTasks');
+
+  for (const workspaceFolder of workspaceFolders) {
+    let config: ObniCodeConfig;
+    try {
+      config = await loadConfig<ObniCodeConfig>(getConfigPath(workspaceFolder));
+    } catch (error) {
+      if (isNodeError(error) && error.code === 'ENOENT') {
+        continue;
+      }
+
+      const message = error instanceof Error ? error.message : String(error);
+      startupOutput.appendLine(
+        `[${new Date().toISOString()}] ERROR ${workspaceFolder.name} failed to load background tasks: ${message}`
+      );
+      continue;
+    }
+
+    const tasks = normalizeBackgroundTasks(config.backgroundTasks);
+    if (tasks.length === 0) {
+      continue;
+    }
+
+    let stats: fs.Stats;
+    try {
+      stats = await fs.promises.stat(workspaceFolder.uri.fsPath);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      startupOutput.appendLine(
+        `[${new Date().toISOString()}] ERROR ${workspaceFolder.name} failed to stat workspace folder: ${message}`
+      );
+      continue;
+    }
+
+    const variables = buildVariables(workspaceFolder.uri, workspaceFolder, stats, [workspaceFolder.uri]);
+    for (const task of tasks) {
+      const output = getOutputChannel(task.useTerminal ? 'obnicode.backgroundTasks' : task.outputChannel);
+      startBackgroundTask(task, workspaceFolder, variables, output, context);
+    }
+  }
+}
+
+function startBackgroundTask(
+  task: BackgroundTask,
+  workspaceFolder: vscode.WorkspaceFolder,
+  variables: TemplateVariables,
+  output: vscode.OutputChannel,
+  context: vscode.ExtensionContext
+): void {
+  const command = interpolate(task.command, variables);
+  const cwd = interpolate(task.cwd ?? '${rawWorkspaceFolder}', variables);
+  const startedAt = Date.now();
+
+  if (!command.trim()) {
+    logBackgroundTaskEvent(output, 'ERROR', task, workspaceFolder, 'empty command');
+    return;
+  }
+
+  if (task.useTerminal) {
+    logBackgroundTaskEvent(output, 'START', task, workspaceFolder, `terminal command=${command}`);
+    const terminal = vscode.window.createTerminal({
+      name: task.terminalName ?? task.name ?? 'Background Task',
+      cwd
+    });
+
+    terminal.show();
+    terminal.sendText(command, true);
+    logBackgroundTaskEvent(output, 'SUCCESS', task, workspaceFolder, 'sent to terminal');
+    return;
+  }
+
+  logBackgroundTaskEvent(output, 'START', task, workspaceFolder, `command=${command}`);
+  const child = spawn(command, {
+    cwd,
+    shell: true,
+    windowsHide: true
+  });
+
+  let stderr = '';
+
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+
+  child.stdout.on('data', (chunk: string) => {
+    output.append(chunk);
+  });
+
+  child.stderr.on('data', (chunk: string) => {
+    stderr += chunk;
+    output.append(chunk);
+  });
+
+  child.on('error', (error) => {
+    logBackgroundTaskEvent(output, 'ERROR', task, workspaceFolder, error.message, startedAt);
+  });
+
+  child.on('close', (code, signal) => {
+    if (code === 0) {
+      logBackgroundTaskEvent(output, 'SUCCESS', task, workspaceFolder, 'completed', startedAt);
+      return;
+    }
+
+    const status = signal ? `signal ${signal}` : `exit code ${code}`;
+    const details = stderr.trim() ? `: ${stderr.trim()}` : '';
+    logBackgroundTaskEvent(output, 'ERROR', task, workspaceFolder, `failed with ${status}${details}`, startedAt);
+  });
+
+  context.subscriptions.push({
+    dispose: () => {
+      if (!child.killed) {
+        child.kill();
+      }
+    }
+  });
 }
 
 async function runExplorerViewAction(
@@ -364,6 +524,24 @@ function normalizeExplorerViewActions(value: unknown): ExplorerViewAction[] {
     .filter((item) => item.command.trim().length > 0);
 }
 
+function normalizeBackgroundTasks(value: unknown): BackgroundTask[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((item): item is BackgroundTaskConfig => Boolean(item) && typeof item === 'object')
+    .map((item, index) => ({
+      name: stringValue(item.name || `Background task ${index + 1}`),
+      command: stringValue(item.command || ''),
+      cwd: item.cwd === undefined ? undefined : stringValue(item.cwd),
+      outputChannel: stringValue(item.outputChannel || ''),
+      terminalName: item.terminalName === undefined ? undefined : stringValue(item.terminalName),
+      useTerminal: item.useTerminal === true
+    }))
+    .filter((item) => item.command.trim().length > 0 && (item.useTerminal || item.outputChannel.trim().length > 0));
+}
+
 function normalizeFormatters(value: unknown): Formatter[] {
   if (!Array.isArray(value)) {
     return [];
@@ -496,6 +674,20 @@ function logExplorerViewActionEvent(
   const targetPaths = targets.map((target) => getMatchPath(target, workspaceFolder)).join(', ');
   output.appendLine(
     `[${new Date().toISOString()}] ${status} ${action.name} targets=${targetPaths}${elapsed} ${message}`
+  );
+}
+
+function logBackgroundTaskEvent(
+  output: vscode.OutputChannel,
+  status: 'START' | 'SUCCESS' | 'ERROR',
+  task: BackgroundTask,
+  workspaceFolder: vscode.WorkspaceFolder,
+  message: string,
+  startedAt?: number
+): void {
+  const elapsed = startedAt === undefined ? '' : ` duration=${Date.now() - startedAt}ms`;
+  output.appendLine(
+    `[${new Date().toISOString()}] ${status} ${task.name} workspace=${workspaceFolder.name}${elapsed} ${message}`
   );
 }
 

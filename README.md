@@ -2,7 +2,7 @@
 
 VS Code extension that adds a **Run Explorer View Action** entry to the Explorer right-click menu for files and folders.
 
-Explorer view actions and formatters are read from a workspace YAML file:
+Explorer view actions, startup background tasks, and formatters are read from a workspace YAML file:
 
 ```text
 .vscode/obnicode.yaml
@@ -10,7 +10,7 @@ Explorer view actions and formatters are read from a workspace YAML file:
 
 The extension contributes a YAML schema for this file, so editors with YAML schema support can show completion, inline documentation, and validation errors.
 
-The configuration file is optional. If `.vscode/obnicode.yaml` is missing, no Explorer view actions or document formatters are added.
+The configuration file is optional. If `.vscode/obnicode.yaml` is missing, no Explorer view actions, background tasks, or document formatters are added.
 
 The native VS Code menu API does not allow runtime-generated menu entries with labels loaded from workspace YAML. The **Run Explorer View Action** command opens the filtered list of matching actions.
 
@@ -65,6 +65,40 @@ formatters:
       - typescript
     command: npx prettier --stdin-filepath ${path}
 ```
+
+## Background tasks
+
+Add `backgroundTasks` to launch commands when the extension activates. Each task writes stdout, stderr, and lifecycle logs to the configured VS Code output channel:
+
+```yaml
+backgroundTasks:
+  - name: Watch TypeScript
+    command: npm run watch
+    cwd: ${rawWorkspaceFolder}
+    outputChannel: obnicode.watch
+```
+
+Background tasks are started once per workspace folder at extension activation. They are stopped when the extension is deactivated.
+
+Set `useTerminal: true` when a background task needs an interactive shell or should stay visible in a terminal:
+
+```yaml
+backgroundTasks:
+  - name: Dev server
+    command: npm run dev
+    cwd: ${rawWorkspaceFolder}
+    useTerminal: true
+    terminalName: ObniCode dev server
+```
+
+Options:
+
+- `name`: required. Name used in output logs.
+- `command`: required. Shell command launched at startup.
+- `outputChannel`: required unless `useTerminal: true`. VS Code output channel receiving stdout, stderr, `START`, `SUCCESS`, and `ERROR` logs.
+- `cwd`: optional. Working directory. Defaults to `${rawWorkspaceFolder}`.
+- `useTerminal`: optional, default `false`. Runs the command in a VS Code integrated terminal.
+- `terminalName`: optional. Terminal name when `useTerminal: true`.
 
 ## Supported variables
 
@@ -172,9 +206,12 @@ The schema is associated through the `yamlValidation` contribution in `package.j
 
 Validated shape:
 
-- top-level `explorerViewActions` and `formatters` arrays are both optional
+- top-level `explorerViewActions`, `backgroundTasks`, and `formatters` arrays are all optional
 - each Explorer view action requires `name` and `command`
 - optional properties are `description`, `cwd`, `match`, `terminalName`, and `useTerminal`
+- each background task requires `name` and `command`
+- background task `outputChannel` is required unless `useTerminal: true`
+- background task optional properties are `cwd`, `outputChannel`, `useTerminal`, and `terminalName`
 - each formatter requires `command` and either `language` or `languages`
 - unknown properties are rejected
 
