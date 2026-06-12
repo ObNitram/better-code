@@ -5,16 +5,16 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { parse as parseYaml } from 'yaml';
 
-const DEFAULT_FUNCTIONS_CONFIG_FILE = '.vscode/functions.yaml';
-const DEFAULT_FORMATTERS_CONFIG_FILE = '.vscode/formatters.yaml';
+const DEFAULT_CONFIG_FILE = '.vscode/obnicode.yaml';
 
-interface ShellFunctionConfig {
+interface ExplorerViewActionConfig {
   name?: unknown;
   description?: unknown;
   command?: unknown;
   cwd?: unknown;
   terminalName?: unknown;
   match?: unknown;
+  useTerminal?: unknown;
 }
 
 interface FormatterConfig {
@@ -25,11 +25,8 @@ interface FormatterConfig {
   match?: unknown;
 }
 
-interface FunctionsConfig {
-  functions?: unknown;
-}
-
-interface FormattersConfig {
+interface ObniCodeConfig {
+  explorerViewActions?: unknown;
   formatters?: unknown;
 }
 
@@ -38,7 +35,7 @@ interface MatchableConfig {
   matchRegex?: RegExp;
 }
 
-interface ShellFunction {
+interface ExplorerViewAction {
   name: string;
   description: string;
   command: string;
@@ -46,6 +43,7 @@ interface ShellFunction {
   terminalName?: string;
   match?: string;
   matchRegex?: RegExp;
+  useTerminal: boolean;
 }
 
 interface Formatter extends MatchableConfig {
@@ -70,14 +68,15 @@ type StatusSegmentKey = 'cpu' | 'frequency' | 'memory' | 'disk';
 
 export function activate(context: vscode.ExtensionContext): void {
   const formatterOutput = vscode.window.createOutputChannel('obnicode.formatters');
-  const runActionCommand = vscode.commands.registerCommand(
+  const explorerViewActionOutput = vscode.window.createOutputChannel('obnicode.explorerViewActions');
+  const runExplorerViewActionCommand = vscode.commands.registerCommand(
     'obnicode.run',
     async (resourceUri?: vscode.Uri, selectedUris?: vscode.Uri[]) => {
       try {
-        await runShellFunction(resourceUri, selectedUris);
+        await runExplorerViewAction(explorerViewActionOutput, resourceUri, selectedUris);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`Action failed: ${message}`);
+        vscode.window.showErrorMessage(`Explorer view action failed: ${message}`);
       }
     }
   );
@@ -99,7 +98,13 @@ export function activate(context: vscode.ExtensionContext): void {
     new ConfiguredFormattingProvider(formatterOutput)
   );
 
-  context.subscriptions.push(runActionCommand, setupExampleCommand, formattingProvider, formatterOutput);
+  context.subscriptions.push(
+    runExplorerViewActionCommand,
+    setupExampleCommand,
+    formattingProvider,
+    formatterOutput,
+    explorerViewActionOutput
+  );
   startSystemStatusBar(context);
 }
 
@@ -109,51 +114,30 @@ async function setupExampleConfigs(context: vscode.ExtensionContext): Promise<vo
     throw new Error('Open a workspace folder before setting up ObniCode examples.');
   }
 
-  const examples = [
-    {
-      source: path.join(context.extensionPath, 'examples', 'functions.yaml'),
-      target: getFunctionsConfigPath(workspaceFolder)
-    },
-    {
-      source: path.join(context.extensionPath, 'examples', 'formatters.yaml'),
-      target: getFormattersConfigPath(workspaceFolder)
-    }
-  ];
+  const source = path.join(context.extensionPath, 'examples', 'obnicode.yaml');
+  const target = getConfigPath(workspaceFolder);
+  const relativeTarget = vscode.workspace.asRelativePath(target);
 
-  const examplesToWrite = [];
-  for (const example of examples) {
-    if (await fileExists(example.target)) {
-      const overwrite = await vscode.window.showWarningMessage(
-        `Overwrite existing ObniCode config file? ${vscode.workspace.asRelativePath(example.target)}`,
-        { modal: true },
-        'Overwrite'
-      );
+  if (await fileExists(target)) {
+    const overwrite = await vscode.window.showWarningMessage(
+      `Overwrite existing ObniCode config file? ${relativeTarget}`,
+      { modal: true },
+      'Overwrite'
+    );
 
-      if (overwrite === 'Overwrite') {
-        examplesToWrite.push(example);
-      }
-    } else {
-      examplesToWrite.push(example);
+    if (overwrite !== 'Overwrite') {
+      vscode.window.showInformationMessage(`ObniCode example configuration already exists: ${relativeTarget}`);
+      return;
     }
   }
 
-  if (examplesToWrite.length === 0) {
-    vscode.window.showInformationMessage('ObniCode example configuration files already exist.');
-    return;
-  }
-
-  for (const example of examplesToWrite) {
-    await fs.promises.mkdir(path.dirname(example.target), { recursive: true });
-    await fs.promises.copyFile(example.source, example.target);
-  }
-
-  const createdTargets = examplesToWrite
-    .map((example) => vscode.workspace.asRelativePath(example.target))
-    .join(', ');
-  vscode.window.showInformationMessage(`ObniCode example configuration files written: ${createdTargets}`);
+  await fs.promises.mkdir(path.dirname(target), { recursive: true });
+  await fs.promises.copyFile(source, target);
+  vscode.window.showInformationMessage(`ObniCode example configuration written: ${relativeTarget}`);
 }
 
-async function runShellFunction(
+async function runExplorerViewAction(
+  output: vscode.OutputChannel,
   resourceUri?: vscode.Uri,
   selectedUris?: vscode.Uri[]
 ): Promise<void> {
@@ -167,10 +151,10 @@ async function runShellFunction(
     throw new Error('The selected item is not inside an open workspace.');
   }
 
-  const configPath = getFunctionsConfigPath(workspaceFolder);
-  let config: FunctionsConfig;
+  const configPath = getConfigPath(workspaceFolder);
+  let config: ObniCodeConfig;
   try {
-    config = await loadConfig<FunctionsConfig>(configPath);
+    config = await loadConfig<ObniCodeConfig>(configPath);
   } catch (error) {
     if (isNodeError(error) && error.code === 'ENOENT') {
       return;
@@ -179,18 +163,18 @@ async function runShellFunction(
     throw error;
   }
 
-  const allFunctions = normalizeFunctions(config.functions);
+  const allActions = normalizeExplorerViewActions(config.explorerViewActions);
 
-  if (allFunctions.length === 0) {
+  if (allActions.length === 0) {
     return;
   }
 
-  const functions = allFunctions.filter((fn) => appliesToTargets(fn, workspaceFolder, targets));
-  if (functions.length === 0) {
+  const actions = allActions.filter((action) => appliesToTargets(action, workspaceFolder, targets));
+  if (actions.length === 0) {
     return;
   }
 
-  const picked = await pickFunction(functions);
+  const picked = await pickExplorerViewAction(actions);
   if (!picked) {
     return;
   }
@@ -202,16 +186,33 @@ async function runShellFunction(
   const cwd = interpolate(picked.cwd ?? '${rawWorkspaceFolder}', variables);
 
   if (!command.trim()) {
-    throw new Error(`Function "${picked.name}" has an empty command.`);
+    throw new Error(`Explorer view action "${picked.name}" has an empty command.`);
   }
 
-  const terminal = vscode.window.createTerminal({
-    name: picked.terminalName ?? picked.name ?? 'Shell Function',
-    cwd
-  });
+  if (picked.useTerminal) {
+    logExplorerViewActionEvent(output, 'START', picked, workspaceFolder, targets, `terminal command=${command}`);
+    const terminal = vscode.window.createTerminal({
+      name: picked.terminalName ?? picked.name ?? 'Explorer View Action',
+      cwd
+    });
 
-  terminal.show();
-  terminal.sendText(command, true);
+    terminal.show();
+    terminal.sendText(command, true);
+    logExplorerViewActionEvent(output, 'SUCCESS', picked, workspaceFolder, targets, 'sent to terminal');
+    return;
+  }
+
+  const startedAt = Date.now();
+  logExplorerViewActionEvent(output, 'START', picked, workspaceFolder, targets, `command=${command}`);
+  try {
+    await runLoggedExplorerViewActionCommand(command, cwd, output);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logExplorerViewActionEvent(output, 'ERROR', picked, workspaceFolder, targets, message, startedAt);
+    throw error;
+  }
+
+  logExplorerViewActionEvent(output, 'SUCCESS', picked, workspaceFolder, targets, 'completed', startedAt);
 }
 
 class ConfiguredFormattingProvider implements vscode.DocumentFormattingEditProvider {
@@ -227,9 +228,9 @@ class ConfiguredFormattingProvider implements vscode.DocumentFormattingEditProvi
       return [];
     }
 
-    let config: FormattersConfig;
+    let config: ObniCodeConfig;
     try {
-      config = await loadConfig<FormattersConfig>(getFormattersConfigPath(workspaceFolder));
+      config = await loadConfig<ObniCodeConfig>(getConfigPath(workspaceFolder));
     } catch (error) {
       if (isNodeError(error) && error.code === 'ENOENT') {
         return [];
@@ -309,47 +310,16 @@ function getTargets(resourceUri?: vscode.Uri, selectedUris?: vscode.Uri[]): vsco
   return candidates.filter((uri) => uri.scheme === 'file');
 }
 
-function getFunctionsConfigPath(workspaceFolder: vscode.WorkspaceFolder): string {
-  return getConfiguredPath(
-    workspaceFolder,
-    'functionsConfigFile',
-    DEFAULT_FUNCTIONS_CONFIG_FILE
-  );
-}
-
-function getFormattersConfigPath(workspaceFolder: vscode.WorkspaceFolder): string {
-  return getConfiguredPath(
-    workspaceFolder,
-    'formattersConfigFile',
-    DEFAULT_FORMATTERS_CONFIG_FILE
-  );
-}
-
-function getConfiguredPath(
-  workspaceFolder: vscode.WorkspaceFolder,
-  settingName: string,
-  defaultPath: string
-): string {
+function getConfigPath(workspaceFolder: vscode.WorkspaceFolder): string {
   const configured = vscode.workspace
     .getConfiguration('obnicode')
-    .get<string>(settingName, defaultPath);
+    .get<string>('configFile', DEFAULT_CONFIG_FILE);
 
-  return path.resolve(workspaceFolder.uri.fsPath, configured || defaultPath);
+  return path.resolve(workspaceFolder.uri.fsPath, configured || DEFAULT_CONFIG_FILE);
 }
 
 async function loadConfig<T extends object>(configPath: string): Promise<T> {
-  let content: string;
-  try {
-    content = await fs.promises.readFile(configPath, 'utf8');
-  } catch (error) {
-    if (isNodeError(error) && error.code === 'ENOENT') {
-      const missingConfigError = new Error(`Missing config file: ${configPath}`) as NodeJS.ErrnoException;
-      missingConfigError.code = 'ENOENT';
-      throw missingConfigError;
-    }
-    throw error;
-  }
-
+  const content = await fs.promises.readFile(configPath, 'utf8');
   const parsed = parseYaml(content);
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error(`Invalid config file: ${configPath}`);
@@ -371,20 +341,21 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
-function normalizeFunctions(value: unknown): ShellFunction[] {
+function normalizeExplorerViewActions(value: unknown): ExplorerViewAction[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
   return value
-    .filter((item): item is ShellFunctionConfig => Boolean(item) && typeof item === 'object')
+    .filter((item): item is ExplorerViewActionConfig => Boolean(item) && typeof item === 'object')
     .map((item, index) => ({
-      name: stringValue(item.name || `Function ${index + 1}`),
+      name: stringValue(item.name || `Explorer view action ${index + 1}`),
       description: stringValue(item.description || ''),
       command: stringValue(item.command || ''),
       cwd: item.cwd === undefined ? undefined : stringValue(item.cwd),
       terminalName: item.terminalName === undefined ? undefined : stringValue(item.terminalName),
-      match: item.match === undefined ? undefined : stringValue(item.match)
+      match: item.match === undefined ? undefined : stringValue(item.match),
+      useTerminal: item.useTerminal === true
     }))
     .map((item) => ({
       ...item,
@@ -425,25 +396,25 @@ function normalizeLanguages(language: unknown, languages: unknown): string[] {
   return [...new Set(values.map((item) => item.trim()).filter(Boolean))];
 }
 
-async function pickFunction(functions: ShellFunction[]): Promise<ShellFunction | undefined> {
-  if (functions.length === 1) {
-    return functions[0];
+async function pickExplorerViewAction(actions: ExplorerViewAction[]): Promise<ExplorerViewAction | undefined> {
+  if (actions.length === 1) {
+    return actions[0];
   }
 
   const picked = await vscode.window.showQuickPick(
-    functions.map((fn) => ({
-      label: fn.name,
-      description: fn.description,
-      detail: fn.command,
-      fn
+    actions.map((action) => ({
+      label: action.name,
+      description: action.description,
+      detail: action.command,
+      action
     })),
     {
-      title: 'Run Custom Actions',
-      placeHolder: 'Choose an action to run'
+      title: 'Run Explorer View Action',
+      placeHolder: 'Choose an explorer view action to run'
     }
   );
 
-  return picked?.fn;
+  return picked?.action;
 }
 
 function buildVariables(
@@ -474,15 +445,15 @@ function buildVariables(
 }
 
 function appliesToTargets(
-  fn: MatchableConfig,
+  action: MatchableConfig,
   workspaceFolder: vscode.WorkspaceFolder,
   targets: vscode.Uri[]
 ): boolean {
-  if (!fn.matchRegex) {
+  if (!action.matchRegex) {
     return true;
   }
 
-  return targets.every((target) => fn.matchRegex?.test(getMatchPath(target, workspaceFolder)));
+  return targets.every((target) => action.matchRegex?.test(getMatchPath(target, workspaceFolder)));
 }
 
 function appliesToDocument(
@@ -503,13 +474,89 @@ function normalizePathForMatch(filePath: string): string {
   return filePath.split(path.sep).join('/');
 }
 
-function compileMatchRegex(functionName: string, pattern: string): RegExp {
+function compileMatchRegex(label: string, pattern: string): RegExp {
   try {
     return new RegExp(pattern);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Invalid match regex for "${functionName}": ${message}`);
+    throw new Error(`Invalid match regex for "${label}": ${message}`);
   }
+}
+
+function logExplorerViewActionEvent(
+  output: vscode.OutputChannel,
+  status: 'START' | 'SUCCESS' | 'ERROR',
+  action: ExplorerViewAction,
+  workspaceFolder: vscode.WorkspaceFolder,
+  targets: vscode.Uri[],
+  message: string,
+  startedAt?: number
+): void {
+  const elapsed = startedAt === undefined ? '' : ` duration=${Date.now() - startedAt}ms`;
+  const targetPaths = targets.map((target) => getMatchPath(target, workspaceFolder)).join(', ');
+  output.appendLine(
+    `[${new Date().toISOString()}] ${status} ${action.name} targets=${targetPaths}${elapsed} ${message}`
+  );
+}
+
+function runLoggedExplorerViewActionCommand(
+  command: string,
+  cwd: string,
+  output: vscode.OutputChannel
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, {
+      cwd,
+      shell: true,
+      windowsHide: true
+    });
+
+    let stderr = '';
+    let settled = false;
+
+    const finish = (error?: Error): void => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    };
+
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+
+    child.stdout.on('data', (chunk: string) => {
+      output.append(chunk);
+    });
+
+    child.stderr.on('data', (chunk: string) => {
+      stderr += chunk;
+      output.append(chunk);
+    });
+
+    child.on('error', (error) => {
+      finish(error);
+    });
+
+    child.on('close', (code, signal) => {
+      if (code === 0) {
+        finish();
+        return;
+      }
+
+      const status = signal ? `signal ${signal}` : `exit code ${code}`;
+      const details = stderr.trim() ? `: ${stderr.trim()}` : '';
+      finish(new Error(`Explorer view action command failed with ${status}${details}`));
+    });
+
+    child.stdin.end();
+  });
 }
 
 function runFormatterCommand(

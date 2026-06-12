@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://obnicode.local/schemas/obnicode.schema.json",
+  "title": "ObniCode configuration",
+  "description": "Defines Explorer view actions and document formatters backed by shell commands.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "explorerViewActions": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Shell actions shown in the Explorer view right-click command picker.",
+      "items": {
+        "$ref": "#/$defs/explorerViewAction"
+      }
+    },
+    "formatters": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Document formatters. The command receives the document content on stdin and must write the formatted content to stdout.",
+      "items": {
+        "$ref": "#/$defs/formatter"
+      }
+    }
+  },
+  "$defs": {
+    "explorerViewAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "command"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display name shown in the VS Code Quick Pick."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional short description shown next to the action name."
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Shell command executed for this action. By default, stdout and stderr are written to the obnicode.explorerViewActions output channel. Supports template variables such as ${path}, ${workspaceFolder}, and ${selectedType}."
+        },
+        "cwd": {
+          "type": "string",
+          "default": "${rawWorkspaceFolder}",
+          "description": "Working directory for the command. Supports the same template variables as command. Prefer raw path variables such as ${rawWorkspaceFolder}, ${rawPath}, or ${rawFileDirname}."
+        },
+        "match": {
+          "type": "string",
+          "format": "regex",
+          "description": "Optional JavaScript regular expression. The action is only shown when every selected file or folder matches its workspace-relative path normalized with forward slashes. Example: ^src/.*\\.ts$"
+        },
+        "terminalName": {
+          "type": "string",
+          "description": "Optional integrated terminal name when useTerminal is true. Defaults to the action name."
+        },
+        "useTerminal": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run the command in a VS Code integrated terminal instead of the obnicode.explorerViewActions output channel."
+        }
+      }
+    },
+    "formatter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "language"
+          ]
+        },
+        {
+          "required": [
+            "languages"
+          ]
+        }
+      ],
+      "properties": {
+        "language": {
+          "type": "string",
+          "minLength": 1,
+          "description": "VS Code language id handled by this formatter, such as typescript, javascript, json, yaml, python, or markdown."
+        },
+        "languages": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "VS Code language ids handled by this formatter.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Shell command used as a formatter. It receives the document content on stdin and must print the formatted content to stdout."
+        },
+        "cwd": {
+          "type": "string",
+          "default": "${rawWorkspaceFolder}",
+          "description": "Working directory for the formatter command. Supports template variables. Prefer raw path variables such as ${rawWorkspaceFolder}, ${rawPath}, or ${rawFileDirname}."
+        },
+        "match": {
+          "type": "string",
+          "format": "regex",
+          "description": "Optional JavaScript regular expression tested against the workspace-relative path normalized with forward slashes. Example: ^src/.*\\.ts$"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "explorerViewActions": [
+        {
+          "name": "Print selected path",
+          "description": "Echo the selected file or folder path",
+          "command": "echo ${path}",
+          "useTerminal": false
+        }
+      ],
+      "formatters": [
+        {
+          "language": "typescript",
+          "match": "^src/.*\\.ts$",
+          "command": "npx prettier --stdin-filepath ${path}"
+        }
+      ]
+    }
+  ]
+}

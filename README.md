@@ -1,36 +1,36 @@
 # ObniCode
 
-VS Code extension that adds a **Run Custom Actions** entry to the Explorer right-click menu for files and folders.
+VS Code extension that adds a **Run Explorer View Action** entry to the Explorer right-click menu for files and folders.
 
-Functions and formatters are read from separate workspace YAML files:
+Explorer view actions and formatters are read from a workspace YAML file:
 
 ```text
-.vscode/functions.yaml
-.vscode/formatters.yaml
+.vscode/obnicode.yaml
 ```
 
-The extension contributes YAML schemas for both files, so editors with YAML schema support can show completion, inline documentation, and validation errors.
+The extension contributes a YAML schema for this file, so editors with YAML schema support can show completion, inline documentation, and validation errors.
 
-Both configuration files are optional. If `.vscode/functions.yaml` is missing, no context actions are added. If `.vscode/formatters.yaml` is missing, no document formatters are added.
+The configuration file is optional. If `.vscode/obnicode.yaml` is missing, no Explorer view actions or document formatters are added.
 
-The native VS Code menu API does not allow runtime-generated menu entries with labels loaded from workspace YAML. The **Run Custom Actions** command opens the filtered list of matching functions.
+The native VS Code menu API does not allow runtime-generated menu entries with labels loaded from workspace YAML. The **Run Explorer View Action** command opens the filtered list of matching actions.
 
-Run **ObniCode: Setup ObniCode Example** from the command palette to create example `.vscode/functions.yaml` and `.vscode/formatters.yaml` files in the current workspace. The source templates live in `examples/`.
+Run **ObniCode: Setup ObniCode Example** from the command palette to create an example `.vscode/obnicode.yaml` file in the current workspace. The source template lives in `examples/`.
 
-## Functions configuration
+## Explorer view actions configuration
 
 ```yaml
-# .vscode/functions.yaml
-# yaml-language-server: $schema=../schemas/functions.schema.json
-functions:
+# .vscode/obnicode.yaml
+# yaml-language-server: $schema=../schemas/obnicode.schema.json
+explorerViewActions:
   - name: Print selected path
     description: Echo the selected file or folder path
     command: echo ${path}
 
   - name: List selected folder
-    description: Run ls in the selected folder
+    description: Run ls in the selected folder in a terminal
     match: ^src($|/)
     cwd: ${rawPath}
+    useTerminal: true
     command: ls -la
 
   - name: Multi-line command
@@ -40,11 +40,21 @@ functions:
       echo "Selected: ${rawPath}"
 ```
 
+Explorer view actions run in the background by default. Their start, success, errors, stdout, and stderr are written to the **obnicode.explorerViewActions** output channel.
+
+Set `useTerminal: true` when an action needs an interactive shell or when you want the result displayed in a VS Code integrated terminal:
+
+```yaml
+explorerViewActions:
+  - name: Interactive shell command
+    command: npm run dev
+    useTerminal: true
+    terminalName: ObniCode dev server
+```
+
 ## Formatters configuration
 
 ```yaml
-# .vscode/formatters.yaml
-# yaml-language-server: $schema=../schemas/formatters.schema.json
 formatters:
   - language: typescript
     match: ^src/.*\.ts$
@@ -85,10 +95,10 @@ Use raw variables for `cwd`, for example `${rawWorkspaceFolder}`, `${rawPath}`, 
 
 ## Match filters
 
-Add `match` to restrict where a function is available:
+Add `match` to restrict where an Explorer view action is available:
 
 ```yaml
-functions:
+explorerViewActions:
   - name: Compile TypeScript file
     match: ^src/.*\.ts$
     command: npm run compile
@@ -97,7 +107,7 @@ functions:
 `match` is a JavaScript regular expression tested against the workspace-relative path, normalized with `/` separators. For example:
 
 - `src/extension.ts` for a file
-- `schemas/functions.schema.json` for a file
+- `schemas/obnicode.schema.json` for a file
 - `src` for a folder
 - `.` for the workspace root
 
@@ -149,25 +159,22 @@ $(pulse) 12%    $(dashboard) 3.2 GHz    $(ellipsis) 9.5 GB/32.0 GB    $(database
 
 Settings:
 
-- `obnicode.functionsConfigFile`: workspace-relative path to the functions YAML file, default `.vscode/functions.yaml`
-- `obnicode.formattersConfigFile`: workspace-relative path to the formatters YAML file, default `.vscode/formatters.yaml`
+- `obnicode.configFile`: workspace-relative path to the ObniCode YAML file, default `.vscode/obnicode.yaml`
 - `obnicode.systemStatus.enabled`: show or hide the item
 - `obnicode.systemStatus.updateIntervalMs`: refresh interval, default `3000`
 - `obnicode.systemStatus.diskPath`: path used to measure storage, default first workspace folder
 
 ## Schema
 
-The schemas are associated through the `yamlValidation` contribution in `package.json`:
+The schema is associated through the `yamlValidation` contribution in `package.json`:
 
-- `schemas/functions.schema.json` for `.vscode/functions.yaml`
-- `schemas/formatters.schema.json` for `.vscode/formatters.yaml`
+- `schemas/obnicode.schema.json` for `.vscode/obnicode.yaml`
 
 Validated shape:
 
-- top-level `functions` array is required in the functions config file
-- top-level `formatters` array is required in the formatters config file
-- each function requires `name` and `command`
-- optional properties are `description`, `cwd`, `match`, and `terminalName`
+- top-level `explorerViewActions` and `formatters` arrays are both optional
+- each Explorer view action requires `name` and `command`
+- optional properties are `description`, `cwd`, `match`, `terminalName`, and `useTerminal`
 - each formatter requires `command` and either `language` or `languages`
 - unknown properties are rejected
 
@@ -177,8 +184,8 @@ Validated shape:
 2. Run `npm install`.
 3. Run `npm run compile`.
 4. Press `F5` to start an Extension Development Host.
-5. In the test workspace, run **ObniCode: Setup ObniCode Example** or create `.vscode/functions.yaml` and/or `.vscode/formatters.yaml`.
-6. Right-click a file or folder in the Explorer and choose **Run Custom Actions**.
+5. In the test workspace, run **ObniCode: Setup ObniCode Example** or create `.vscode/obnicode.yaml`.
+6. Right-click a file or folder in the Explorer and choose **Run Explorer View Action**.
 
 ## Build VSIX
 

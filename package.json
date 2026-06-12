@@ -1,7 +1,7 @@
 {
   "name": "obnicode",
   "displayName": "ObniCode",
-  "description": "Execute YAML-defined context actions and document formatters.",
+  "description": "Execute YAML-defined Explorer view actions and document formatters.",
   "version": "0.1.0",
   "publisher": "local",
   "engines": {
@@ -21,7 +21,7 @@
     "commands": [
       {
         "command": "obnicode.run",
-        "title": "Run Custom Actions",
+        "title": "Run Explorer View Action",
         "category": "ObniCode"
       },
       {
@@ -31,6 +31,12 @@
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "obnicode.run",
+          "when": "false"
+        }
+      ],
       "explorer/context": [
         {
           "command": "obnicode.run",
@@ -40,34 +46,21 @@
     },
     "yamlValidation": [
       {
-        "fileMatch": ".vscode/functions.yaml",
-        "url": "./schemas/functions.schema.json"
+        "fileMatch": ".vscode/obnicode.yaml",
+        "url": "./schemas/obnicode.schema.json"
       },
       {
-        "fileMatch": "**/.vscode/functions.yaml",
-        "url": "./schemas/functions.schema.json"
-      },
-      {
-        "fileMatch": ".vscode/formatters.yaml",
-        "url": "./schemas/formatters.schema.json"
-      },
-      {
-        "fileMatch": "**/.vscode/formatters.yaml",
-        "url": "./schemas/formatters.schema.json"
+        "fileMatch": "**/.vscode/obnicode.yaml",
+        "url": "./schemas/obnicode.schema.json"
       }
     ],
     "configuration": {
       "title": "ObniCode",
       "properties": {
-        "obnicode.functionsConfigFile": {
+        "obnicode.configFile": {
           "type": "string",
-          "default": ".vscode/functions.yaml",
-          "description": "Workspace-relative YAML configuration file containing Explorer context shell functions."
-        },
-        "obnicode.formattersConfigFile": {
-          "type": "string",
-          "default": ".vscode/formatters.yaml",
-          "description": "Workspace-relative YAML configuration file containing document formatter commands."
+          "default": ".vscode/obnicode.yaml",
+          "description": "Workspace-relative YAML configuration file containing Explorer view actions and document formatter commands."
         },
         "obnicode.systemStatus.enabled": {
           "type": "boolean",
@@ -92,8 +85,8 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "tsc --noEmit -p ./",
-    "validate:json": "node -e \"const fs=require('fs'); for (const file of ['package.json','package-lock.json','schemas/functions.schema.json','schemas/formatters.schema.json']) JSON.parse(fs.readFileSync(file,'utf8'));\"",
-    "validate:examples": "node -e \"const fs=require('fs'); const YAML=require('yaml'); for (const file of ['examples/functions.yaml','examples/formatters.yaml']) { const parsed=YAML.parse(fs.readFileSync(file,'utf8')); if (!parsed || typeof parsed !== 'object') throw new Error(file); }\"",
+    "validate:json": "node -e \"const fs=require('fs'); for (const file of ['package.json','package-lock.json','schemas/obnicode.schema.json']) JSON.parse(fs.readFileSync(file,'utf8'));\"",
+    "validate:examples": "node -e \"const fs=require('fs'); const YAML=require('yaml'); const parsed=YAML.parse(fs.readFileSync('examples/obnicode.yaml','utf8')); if (!parsed || typeof parsed !== 'object') throw new Error('examples/obnicode.yaml');\"",
     "check": "npm run lint && npm run validate:json && npm run validate:examples",
     "build:vsix": "npm run check && npm run compile && vsce package",
     "vscode:prepublish": "npm run compile"
