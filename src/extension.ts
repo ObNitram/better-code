@@ -69,6 +69,7 @@ interface DiskUsage {
 type StatusSegmentKey = 'cpu' | 'frequency' | 'memory' | 'disk';
 
 export function activate(context: vscode.ExtensionContext): void {
+  const formatterOutput = vscode.window.createOutputChannel('obnicode.formatters');
   const runActionCommand = vscode.commands.registerCommand(
     'obnicode.run',
     async (resourceUri?: vscode.Uri, selectedUris?: vscode.Uri[]) => {
@@ -95,10 +96,10 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const formattingProvider = vscode.languages.registerDocumentFormattingEditProvider(
     { scheme: 'file' },
-    new ConfiguredFormattingProvider()
+    new ConfiguredFormattingProvider(formatterOutput)
   );
 
-  context.subscriptions.push(runActionCommand, setupExampleCommand, formattingProvider);
+  context.subscriptions.push(runActionCommand, setupExampleCommand, formattingProvider, formatterOutput);
   startSystemStatusBar(context);
 }
 
@@ -214,6 +215,8 @@ async function runShellFunction(
 }
 
 class ConfiguredFormattingProvider implements vscode.DocumentFormattingEditProvider {
+  constructor(private readonly output: vscode.OutputChannel) {}
+
   async provideDocumentFormattingEdits(
     document: vscode.TextDocument,
     _options: vscode.FormattingOptions,
@@ -233,7 +236,7 @@ class ConfiguredFormattingProvider implements vscode.DocumentFormattingEditProvi
       }
 
       const message = error instanceof Error ? error.message : String(error);
-      vscode.window.showErrorMessage(`Formatter config failed: ${message}`);
+      this.logFormatterEvent('ERROR', document, workspaceFolder, message);
       return [];
     }
 
@@ -248,14 +251,27 @@ class ConfiguredFormattingProvider implements vscode.DocumentFormattingEditProvi
     const variables = buildVariables(document.uri, workspaceFolder, stats, [document.uri]);
     const command = interpolate(formatter.command, variables);
     const cwd = interpolate(formatter.cwd ?? '${rawWorkspaceFolder}', variables);
+    const startedAt = Date.now();
+    this.logFormatterEvent('START', document, workspaceFolder, `command=${command}`);
 
     if (!command.trim()) {
-      throw new Error(`Formatter for "${document.languageId}" has an empty command.`);
+      const message = `Formatter for "${document.languageId}" has an empty command.`;
+      this.logFormatterEvent('ERROR', document, workspaceFolder, message);
+      return [];
     }
 
     const original = document.getText();
-    const formatted = await runFormatterCommand(command, cwd, original, token);
+    let formatted: string;
+    try {
+      formatted = await runFormatterCommand(command, cwd, original, token);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logFormatterEvent('ERROR', document, workspaceFolder, message, startedAt);
+      return [];
+    }
+
     if (token.isCancellationRequested || formatted === original) {
+      this.logFormatterEvent('SUCCESS', document, workspaceFolder, 'no changes', startedAt);
       return [];
     }
 
@@ -264,7 +280,22 @@ class ConfiguredFormattingProvider implements vscode.DocumentFormattingEditProvi
       document.positionAt(original.length)
     );
 
+    this.logFormatterEvent('SUCCESS', document, workspaceFolder, 'document changed', startedAt);
     return [vscode.TextEdit.replace(fullRange, formatted)];
+  }
+
+  private logFormatterEvent(
+    status: 'START' | 'SUCCESS' | 'ERROR',
+    document: vscode.TextDocument,
+    workspaceFolder: vscode.WorkspaceFolder,
+    message: string,
+    startedAt?: number
+  ): void {
+    const elapsed = startedAt === undefined ? '' : ` duration=${Date.now() - startedAt}ms`;
+    const relativePath = getMatchPath(document.uri, workspaceFolder);
+    this.output.appendLine(
+      `[${new Date().toISOString()}] ${status} ${relativePath} language=${document.languageId}${elapsed} ${message}`
+    );
   }
 }
 

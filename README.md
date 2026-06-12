@@ -130,6 +130,8 @@ formatters:
 
 The first formatter matching the document language and optional `match` regex is used.
 
+Formatter runs are logged to the **obnicode.formatters** output channel with the file path, language id, status, duration, and error message when a formatter fails.
+
 ## System status bar
 
 The extension also shows a status bar item with:
