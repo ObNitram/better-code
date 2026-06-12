@@ -5,8 +5,8 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { parse as parseYaml } from 'yaml';
 
-const DEFAULT_FUNCTIONS_CONFIG_FILE = '.settings/functions.yaml';
-const DEFAULT_FORMATTERS_CONFIG_FILE = '.settings/formatters.yaml';
+const DEFAULT_FUNCTIONS_CONFIG_FILE = '.vscode/functions.yaml';
+const DEFAULT_FORMATTERS_CONFIG_FILE = '.vscode/formatters.yaml';
 
 interface ShellFunctionConfig {
   name?: unknown;

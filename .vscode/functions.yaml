@@ -5,7 +5,7 @@ functions:
     command: echo ${path}
 
   - name: Show workspace and selected item
-    match: ^(src|schemas|\.settings)(/|$)
+    match: ^(src|schemas|\.vscode)(/|$)
     command: |
       echo "Workspace: ${rawWorkspaceFolder}"
       echo "Selected: ${rawPath}"

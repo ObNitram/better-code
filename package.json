@@ -33,19 +33,19 @@
     },
     "yamlValidation": [
       {
-        "fileMatch": ".settings/functions.yaml",
+        "fileMatch": ".vscode/functions.yaml",
         "url": "./schemas/functions.schema.json"
       },
       {
-        "fileMatch": "**/.settings/functions.yaml",
+        "fileMatch": "**/.vscode/functions.yaml",
         "url": "./schemas/functions.schema.json"
       },
       {
-        "fileMatch": ".settings/formatters.yaml",
+        "fileMatch": ".vscode/formatters.yaml",
         "url": "./schemas/formatters.schema.json"
       },
       {
-        "fileMatch": "**/.settings/formatters.yaml",
+        "fileMatch": "**/.vscode/formatters.yaml",
         "url": "./schemas/formatters.schema.json"
       }
     ],
@@ -54,12 +54,12 @@
       "properties": {
         "yamlShellContextActions.functionsConfigFile": {
           "type": "string",
-          "default": ".settings/functions.yaml",
+          "default": ".vscode/functions.yaml",
           "description": "Workspace-relative YAML configuration file containing Explorer context shell functions."
         },
         "yamlShellContextActions.formattersConfigFile": {
           "type": "string",
-          "default": ".settings/formatters.yaml",
+          "default": ".vscode/formatters.yaml",
           "description": "Workspace-relative YAML configuration file containing document formatter commands."
         },
         "yamlShellContextActions.systemStatus.enabled": {

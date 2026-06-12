@@ -5,18 +5,18 @@ VS Code extension that adds a **Shell Actions: Run Shell Function** entry to the
 Functions and formatters are read from separate workspace YAML files:
 
 ```text
-.settings/functions.yaml
-.settings/formatters.yaml
+.vscode/functions.yaml
+.vscode/formatters.yaml
 ```
 
 The extension contributes YAML schemas for both files, so editors with YAML schema support can show completion, inline documentation, and validation errors.
 
-Both configuration files are optional. If `.settings/functions.yaml` is missing, no context actions are added. If `.settings/formatters.yaml` is missing, no document formatters are added.
+Both configuration files are optional. If `.vscode/functions.yaml` is missing, no context actions are added. If `.vscode/formatters.yaml` is missing, no document formatters are added.
 
 ## Functions configuration
 
 ```yaml
-# .settings/functions.yaml
+# .vscode/functions.yaml
 # yaml-language-server: $schema=../schemas/functions.schema.json
 functions:
   - name: Print selected path
@@ -39,7 +39,7 @@ functions:
 ## Formatters configuration
 
 ```yaml
-# .settings/formatters.yaml
+# .vscode/formatters.yaml
 # yaml-language-server: $schema=../schemas/formatters.schema.json
 formatters:
   - language: typescript
@@ -137,8 +137,8 @@ The extension also shows a status bar item with:
 
 Settings:
 
-- `yamlShellContextActions.functionsConfigFile`: workspace-relative path to the functions YAML file, default `.settings/functions.yaml`
-- `yamlShellContextActions.formattersConfigFile`: workspace-relative path to the formatters YAML file, default `.settings/formatters.yaml`
+- `yamlShellContextActions.functionsConfigFile`: workspace-relative path to the functions YAML file, default `.vscode/functions.yaml`
+- `yamlShellContextActions.formattersConfigFile`: workspace-relative path to the formatters YAML file, default `.vscode/formatters.yaml`
 - `yamlShellContextActions.systemStatus.enabled`: show or hide the item
 - `yamlShellContextActions.systemStatus.updateIntervalMs`: refresh interval, default `3000`
 - `yamlShellContextActions.systemStatus.diskPath`: path used to measure storage, default first workspace folder
@@ -147,8 +147,8 @@ Settings:
 
 The schemas are associated through the `yamlValidation` contribution in `package.json`:
 
-- `schemas/functions.schema.json` for `.settings/functions.yaml`
-- `schemas/formatters.schema.json` for `.settings/formatters.yaml`
+- `schemas/functions.schema.json` for `.vscode/functions.yaml`
+- `schemas/formatters.schema.json` for `.vscode/formatters.yaml`
 
 Validated shape:
 
@@ -165,5 +165,5 @@ Validated shape:
 2. Run `npm install`.
 3. Run `npm run compile`.
 4. Press `F5` to start an Extension Development Host.
-5. In the test workspace, create `.settings/functions.yaml` and/or `.settings/formatters.yaml`.
+5. In the test workspace, create `.vscode/functions.yaml` and/or `.vscode/formatters.yaml`.
 6. Right-click a file or folder in the Explorer and choose **Shell Actions: Run Shell Function**.
