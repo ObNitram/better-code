@@ -12,7 +12,8 @@
   ],
   "activationEvents": [
     "onStartupFinished",
-    "onCommand:obnicode.run"
+    "onCommand:obnicode.run",
+    "onCommand:obnicode.setupExample"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -21,6 +22,11 @@
         "command": "obnicode.run",
         "title": "Choose Action...",
         "category": "Context Actions"
+      },
+      {
+        "command": "obnicode.setupExample",
+        "title": "Setup ObniCode Example",
+        "category": "ObniCode"
       }
     ],
     "submenus": [
@@ -98,7 +104,8 @@
     "watch": "tsc -watch -p ./",
     "lint": "tsc --noEmit -p ./",
     "validate:json": "node -e \"const fs=require('fs'); for (const file of ['package.json','package-lock.json','schemas/functions.schema.json','schemas/formatters.schema.json']) JSON.parse(fs.readFileSync(file,'utf8'));\"",
-    "check": "npm run lint && npm run validate:json",
+    "validate:examples": "node -e \"const fs=require('fs'); const YAML=require('yaml'); for (const file of ['examples/functions.yaml','examples/formatters.yaml']) { const parsed=YAML.parse(fs.readFileSync(file,'utf8')); if (!parsed || typeof parsed !== 'object') throw new Error(file); }\"",
+    "check": "npm run lint && npm run validate:json && npm run validate:examples",
     "build:vsix": "npm run check && npm run compile && vsce package",
     "vscode:prepublish": "npm run compile"
   },

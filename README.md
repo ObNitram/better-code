@@ -15,6 +15,8 @@ Both configuration files are optional. If `.vscode/functions.yaml` is missing, n
 
 The native VS Code menu API does not allow runtime-generated menu entries with labels loaded from workspace YAML. The submenu therefore contains a **Choose Action...** command that opens the filtered list of matching functions.
 
+Run **ObniCode: Setup ObniCode Example** from the command palette to create example `.vscode/functions.yaml` and `.vscode/formatters.yaml` files in the current workspace. The source templates live in `examples/`.
+
 ## Functions configuration
 
 ```yaml
@@ -132,10 +134,16 @@ The first formatter matching the document language and optional `match` regex is
 
 The extension also shows a status bar item with:
 
-- CPU usage percentage
-- CPU frequency
-- RAM used / RAM total
-- storage used / storage total
+- `$(pulse)` CPU usage percentage
+- `$(dashboard)` CPU frequency
+- `$(ellipsis)` RAM used / RAM total
+- `$(database)` storage used / storage total
+
+Example:
+
+```text
+$(pulse) 12%    $(dashboard) 3.2 GHz    $(ellipsis) 9.5 GB/32.0 GB    $(database) 137.6 GB/239.4 GB used
+```
 
 Settings:
 
@@ -167,7 +175,7 @@ Validated shape:
 2. Run `npm install`.
 3. Run `npm run compile`.
 4. Press `F5` to start an Extension Development Host.
-5. In the test workspace, create `.vscode/functions.yaml` and/or `.vscode/formatters.yaml`.
+5. In the test workspace, run **ObniCode: Setup ObniCode Example** or create `.vscode/functions.yaml` and/or `.vscode/formatters.yaml`.
 6. Right-click a file or folder in the Explorer and choose **Context Actions > Choose Action...**.
 
 ## Build VSIX

@@ -1,7 +1,5 @@
-node_modules
 src
 .vscode
-.settings
 .git
 .DS_Store
 tsconfig.json

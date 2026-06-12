@@ -66,8 +66,10 @@ interface DiskUsage {
   total: number;
 }
 
+type StatusSegmentKey = 'cpu' | 'frequency' | 'memory' | 'disk';
+
 export function activate(context: vscode.ExtensionContext): void {
-  const disposable = vscode.commands.registerCommand(
+  const runActionCommand = vscode.commands.registerCommand(
     'obnicode.run',
     async (resourceUri?: vscode.Uri, selectedUris?: vscode.Uri[]) => {
       try {
@@ -79,13 +81,69 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   );
 
+  const setupExampleCommand = vscode.commands.registerCommand(
+    'obnicode.setupExample',
+    async () => {
+      try {
+        await setupExampleConfigs(context);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Setup failed: ${message}`);
+      }
+    }
+  );
+
   const formattingProvider = vscode.languages.registerDocumentFormattingEditProvider(
     { scheme: 'file' },
     new ConfiguredFormattingProvider()
   );
 
-  context.subscriptions.push(disposable, formattingProvider);
+  context.subscriptions.push(runActionCommand, setupExampleCommand, formattingProvider);
   startSystemStatusBar(context);
+}
+
+async function setupExampleConfigs(context: vscode.ExtensionContext): Promise<void> {
+  const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+  if (!workspaceFolder) {
+    throw new Error('Open a workspace folder before setting up ObniCode examples.');
+  }
+
+  const examples = [
+    {
+      source: path.join(context.extensionPath, 'examples', 'functions.yaml'),
+      target: getFunctionsConfigPath(workspaceFolder)
+    },
+    {
+      source: path.join(context.extensionPath, 'examples', 'formatters.yaml'),
+      target: getFormattersConfigPath(workspaceFolder)
+    }
+  ];
+
+  const existingTargets = [];
+  for (const example of examples) {
+    if (await fileExists(example.target)) {
+      existingTargets.push(vscode.workspace.asRelativePath(example.target));
+    }
+  }
+
+  if (existingTargets.length > 0) {
+    const overwrite = await vscode.window.showWarningMessage(
+      `Overwrite existing ObniCode config file(s)? ${existingTargets.join(', ')}`,
+      { modal: true },
+      'Overwrite'
+    );
+
+    if (overwrite !== 'Overwrite') {
+      return;
+    }
+  }
+
+  for (const example of examples) {
+    await fs.promises.mkdir(path.dirname(example.target), { recursive: true });
+    await fs.promises.copyFile(example.source, example.target);
+  }
+
+  vscode.window.showInformationMessage('ObniCode example configuration files created.');
 }
 
 async function runShellFunction(
@@ -261,6 +319,19 @@ async function loadConfig<T extends object>(configPath: string): Promise<T> {
   }
 
   return parsed as T;
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.promises.access(filePath, fs.constants.F_OK);
+    return true;
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ENOENT') {
+      return false;
+    }
+
+    throw error;
+  }
 }
 
 function normalizeFunctions(value: unknown): ShellFunction[] {
@@ -476,6 +547,7 @@ function startSystemStatusBar(context: vscode.ExtensionContext): void {
   item.name = 'System Status';
 
   let previousCpu = getCpuSnapshot();
+  const segmentWidths = new Map<StatusSegmentKey, number>();
   let updating = false;
 
   const update = async (): Promise<void> => {
@@ -499,15 +571,25 @@ function startSystemStatusBar(context: vscode.ExtensionContext): void {
       const memory = getMemoryUsage();
       const disk = await getDiskUsage(getConfiguredDiskPath());
       const frequency = getCpuFrequency();
+      const segments = [
+        getStableStatusSegment('cpu', `$(pulse) ${formatPercent(cpu.percent)}`, segmentWidths),
+        getStableStatusSegment('frequency', `$(dashboard) ${frequency}`, segmentWidths),
+        getStableStatusSegment(
+          'memory',
+          `$(ellipsis) ${formatBytes(memory.used)}/${formatBytes(memory.total)}`,
+          segmentWidths
+        ),
+        getStableStatusSegment(
+          'disk',
+          `$(database) ${disk ? `${formatBytes(disk.used)}/${formatBytes(disk.total)} used` : '--'}`,
+          segmentWidths
+        )
+      ];
 
-      item.text = [
-        `CPU ${formatPercent(cpu.percent)} ${frequency}`,
-        `RAM ${formatBytes(memory.used)}/${formatBytes(memory.total)}`,
-        `Disk ${disk ? `${formatBytes(disk.used)}/${formatBytes(disk.total)}` : '--'}`
-      ].join(' | ');
+      item.text = segments.join('    ');
 
       item.tooltip = [
-        'System status',
+        'ObniCode system status',
         `CPU usage: ${formatPercent(cpu.percent)}`,
         `CPU frequency: ${frequency}`,
         `RAM used: ${formatBytes(memory.used)} / ${formatBytes(memory.total)}`,
@@ -634,11 +716,17 @@ function formatPercent(value: number): string {
 
 function formatBytes(bytes: number): string {
   const gib = bytes / 1024 ** 3;
-  if (gib >= 10) {
-    return `${Math.round(gib)}GB`;
-  }
+  return `${gib.toFixed(1)} GB`;
+}
 
-  return `${gib.toFixed(1)}GB`;
+function getStableStatusSegment(
+  key: StatusSegmentKey,
+  value: string,
+  segmentWidths: Map<StatusSegmentKey, number>
+): string {
+  const width = Math.max(segmentWidths.get(key) ?? 0, value.length);
+  segmentWidths.set(key, width);
+  return value.padEnd(width, ' ');
 }
 
 function clamp(value: number, min: number, max: number): number {
