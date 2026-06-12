@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=../schemas/functions.schema.json
+functions:
+  - name: Print selected path
+    description: Echo the selected file or folder path
+    command: echo ${path}
+
+  - name: Show workspace and selected item
+    match: ^(src|schemas|\.settings)(/|$)
+    command: |
+      echo "Workspace: ${rawWorkspaceFolder}"
+      echo "Selected: ${rawPath}"
+      echo "Type: ${selectedType}"

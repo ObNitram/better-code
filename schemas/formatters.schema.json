@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yaml-shell-context-actions.local/schemas/formatters.schema.json",
+  "title": "YAML Shell Context Actions formatters configuration",
+  "description": "Defines document formatters backed by shell commands.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "formatters"
+  ],
+  "properties": {
+    "formatters": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Document formatters. The command receives the document content on stdin and must write the formatted content to stdout.",
+      "items": {
+        "$ref": "#/$defs/formatter"
+      }
+    }
+  },
+  "$defs": {
+    "formatter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "language"
+          ]
+        },
+        {
+          "required": [
+            "languages"
+          ]
+        }
+      ],
+      "properties": {
+        "language": {
+          "type": "string",
+          "minLength": 1,
+          "description": "VS Code language id handled by this formatter, such as typescript, javascript, json, yaml, python, or markdown."
+        },
+        "languages": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "VS Code language ids handled by this formatter.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Shell command used as a formatter. It receives the document content on stdin and must print the formatted content to stdout."
+        },
+        "cwd": {
+          "type": "string",
+          "default": "${rawWorkspaceFolder}",
+          "description": "Working directory for the formatter command. Supports template variables. Prefer raw path variables such as ${rawWorkspaceFolder}, ${rawPath}, or ${rawFileDirname}."
+        },
+        "match": {
+          "type": "string",
+          "format": "regex",
+          "description": "Optional JavaScript regular expression tested against the workspace-relative path normalized with forward slashes. Example: ^src/.*\\.ts$"
+        }
+      },
+      "examples": [
+        {
+          "language": "typescript",
+          "match": "^src/.*\\.ts$",
+          "command": "npx prettier --stdin-filepath ${path}"
+        },
+        {
+          "languages": [
+            "javascript",
+            "typescript"
+          ],
+          "command": "npx prettier --stdin-filepath ${path}"
+        }
+      ]
+    }
+  },
+  "examples": [
+    {
+      "formatters": [
+        {
+          "language": "typescript",
+          "match": "^src/.*\\.ts$",
+          "command": "npx prettier --stdin-filepath ${path}"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "name": "yaml-shell-context-actions",
+  "displayName": "YAML Shell Context Actions",
+  "description": "Run shell functions and document formatters from workspace YAML files.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:yamlShellContextActions.run"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "yamlShellContextActions.run",
+        "title": "Run Shell Function",
+        "category": "Shell Actions"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "yamlShellContextActions.run",
+          "group": "navigation@90"
+        }
+      ]
+    },
+    "yamlValidation": [
+      {
+        "fileMatch": ".settings/functions.yaml",
+        "url": "./schemas/functions.schema.json"
+      },
+      {
+        "fileMatch": "**/.settings/functions.yaml",
+        "url": "./schemas/functions.schema.json"
+      },
+      {
+        "fileMatch": ".settings/formatters.yaml",
+        "url": "./schemas/formatters.schema.json"
+      },
+      {
+        "fileMatch": "**/.settings/formatters.yaml",
+        "url": "./schemas/formatters.schema.json"
+      }
+    ],
+    "configuration": {
+      "title": "YAML Shell Context Actions",
+      "properties": {
+        "yamlShellContextActions.functionsConfigFile": {
+          "type": "string",
+          "default": ".settings/functions.yaml",
+          "description": "Workspace-relative YAML configuration file containing Explorer context shell functions."
+        },
+        "yamlShellContextActions.formattersConfigFile": {
+          "type": "string",
+          "default": ".settings/formatters.yaml",
+          "description": "Workspace-relative YAML configuration file containing document formatter commands."
+        },
+        "yamlShellContextActions.systemStatus.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show CPU, memory, and storage usage in the VS Code status bar."
+        },
+        "yamlShellContextActions.systemStatus.updateIntervalMs": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 1000,
+          "description": "Refresh interval in milliseconds for the system status bar item."
+        },
+        "yamlShellContextActions.systemStatus.diskPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path used to determine storage usage. Defaults to the first workspace folder, or the user home directory when no workspace is open."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "tsc --noEmit -p ./",
+    "vscode:prepublish": "npm run compile"
+  },
+  "dependencies": {
+    "yaml": "^2.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.4.5"
+  }
+}

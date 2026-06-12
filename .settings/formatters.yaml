@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=../schemas/formatters.schema.json
+formatters:
+  - language: json
+    match: ^schemas/.*\.json$
+    command: node -e "let input=''; process.stdin.on('data', c => input += c); process.stdin.on('end', () => process.stdout.write(JSON.stringify(JSON.parse(input), null, 2) + '\n'));"
