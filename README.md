@@ -1,6 +1,6 @@
 # YAML Shell Context Actions
 
-VS Code extension that adds a **Shell Actions: Run Shell Function** entry to the Explorer right-click menu for files and folders.
+VS Code extension that adds a **Context Actions** submenu to the Explorer right-click menu for files and folders.
 
 Functions and formatters are read from separate workspace YAML files:
 
@@ -12,6 +12,8 @@ Functions and formatters are read from separate workspace YAML files:
 The extension contributes YAML schemas for both files, so editors with YAML schema support can show completion, inline documentation, and validation errors.
 
 Both configuration files are optional. If `.vscode/functions.yaml` is missing, no context actions are added. If `.vscode/formatters.yaml` is missing, no document formatters are added.
+
+The native VS Code menu API does not allow runtime-generated menu entries with labels loaded from workspace YAML. The submenu therefore contains a **Choose Action...** command that opens the filtered list of matching functions.
 
 ## Functions configuration
 
@@ -166,4 +168,4 @@ Validated shape:
 3. Run `npm run compile`.
 4. Press `F5` to start an Extension Development Host.
 5. In the test workspace, create `.vscode/functions.yaml` and/or `.vscode/formatters.yaml`.
-6. Right-click a file or folder in the Explorer and choose **Shell Actions: Run Shell Function**.
+6. Right-click a file or folder in the Explorer and choose **Context Actions > Choose Action...**.

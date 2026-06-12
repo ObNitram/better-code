@@ -74,7 +74,7 @@ export function activate(context: vscode.ExtensionContext): void {
         await runShellFunction(resourceUri, selectedUris);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`Shell function failed: ${message}`);
+        vscode.window.showErrorMessage(`Action failed: ${message}`);
       }
     }
   );
@@ -330,8 +330,8 @@ async function pickFunction(functions: ShellFunction[]): Promise<ShellFunction |
       fn
     })),
     {
-      title: 'Run Shell Function',
-      placeHolder: 'Choose the shell function to run'
+      title: 'Context Actions',
+      placeHolder: 'Choose an action to run'
     }
   );
 

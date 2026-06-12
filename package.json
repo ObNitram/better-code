@@ -1,7 +1,7 @@
 {
   "name": "yaml-shell-context-actions",
   "displayName": "YAML Shell Context Actions",
-  "description": "Run shell functions and document formatters from workspace YAML files.",
+  "description": "Execute YAML-defined context actions and document formatters.",
   "version": "0.0.1",
   "publisher": "local",
   "engines": {
@@ -19,15 +19,27 @@
     "commands": [
       {
         "command": "yamlShellContextActions.run",
-        "title": "Run Shell Function",
-        "category": "Shell Actions"
+        "title": "Choose Action...",
+        "category": "Context Actions"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "yamlShellContextActions.functionsMenu",
+        "label": "Context Actions"
       }
     ],
     "menus": {
       "explorer/context": [
         {
-          "command": "yamlShellContextActions.run",
+          "submenu": "yamlShellContextActions.functionsMenu",
           "group": "navigation@90"
+        }
+      ],
+      "yamlShellContextActions.functionsMenu": [
+        {
+          "command": "yamlShellContextActions.run",
+          "group": "navigation@1"
         }
       ]
     },
