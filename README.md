@@ -1,6 +1,6 @@
 # ObniCode
 
-VS Code extension that adds a **Context Actions** submenu to the Explorer right-click menu for files and folders.
+VS Code extension that adds a **Run Custom Actions** entry to the Explorer right-click menu for files and folders.
 
 Functions and formatters are read from separate workspace YAML files:
 
@@ -13,7 +13,7 @@ The extension contributes YAML schemas for both files, so editors with YAML sche
 
 Both configuration files are optional. If `.vscode/functions.yaml` is missing, no context actions are added. If `.vscode/formatters.yaml` is missing, no document formatters are added.
 
-The native VS Code menu API does not allow runtime-generated menu entries with labels loaded from workspace YAML. The submenu therefore contains a **Choose Action...** command that opens the filtered list of matching functions.
+The native VS Code menu API does not allow runtime-generated menu entries with labels loaded from workspace YAML. The **Run Custom Actions** command opens the filtered list of matching functions.
 
 Run **ObniCode: Setup ObniCode Example** from the command palette to create example `.vscode/functions.yaml` and `.vscode/formatters.yaml` files in the current workspace. The source templates live in `examples/`.
 
@@ -176,7 +176,7 @@ Validated shape:
 3. Run `npm run compile`.
 4. Press `F5` to start an Extension Development Host.
 5. In the test workspace, run **ObniCode: Setup ObniCode Example** or create `.vscode/functions.yaml` and/or `.vscode/formatters.yaml`.
-6. Right-click a file or folder in the Explorer and choose **Context Actions > Choose Action...**.
+6. Right-click a file or folder in the Explorer and choose **Run Custom Actions**.
 
 ## Build VSIX
 

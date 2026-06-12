@@ -401,7 +401,7 @@ async function pickFunction(functions: ShellFunction[]): Promise<ShellFunction |
       fn
     })),
     {
-      title: 'Context Actions',
+      title: 'Run Custom Actions',
       placeHolder: 'Choose an action to run'
     }
   );

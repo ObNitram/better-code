@@ -20,8 +20,8 @@
     "commands": [
       {
         "command": "obnicode.run",
-        "title": "Choose Action...",
-        "category": "Context Actions"
+        "title": "Run Custom Actions",
+        "category": "ObniCode"
       },
       {
         "command": "obnicode.setupExample",
@@ -29,23 +29,11 @@
         "category": "ObniCode"
       }
     ],
-    "submenus": [
-      {
-        "id": "obnicode.functionsMenu",
-        "label": "Context Actions"
-      }
-    ],
     "menus": {
       "explorer/context": [
         {
-          "submenu": "obnicode.functionsMenu",
-          "group": "navigation@90"
-        }
-      ],
-      "obnicode.functionsMenu": [
-        {
           "command": "obnicode.run",
-          "group": "navigation@1"
+          "group": "navigation@90"
         }
       ]
     },
