@@ -11,6 +11,8 @@ Functions and formatters are read from separate workspace YAML files:
 
 The extension contributes YAML schemas for both files, so editors with YAML schema support can show completion, inline documentation, and validation errors.
 
+Both configuration files are optional. If `.settings/functions.yaml` is missing, no context actions are added. If `.settings/formatters.yaml` is missing, no document formatters are added.
+
 ## Functions configuration
 
 ```yaml

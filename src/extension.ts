@@ -103,17 +103,26 @@ async function runShellFunction(
   }
 
   const configPath = getFunctionsConfigPath(workspaceFolder);
-  const config = await loadConfig<FunctionsConfig>(configPath);
+  let config: FunctionsConfig;
+  try {
+    config = await loadConfig<FunctionsConfig>(configPath);
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ENOENT') {
+      return;
+    }
+
+    throw error;
+  }
+
   const allFunctions = normalizeFunctions(config.functions);
 
   if (allFunctions.length === 0) {
-    throw new Error(`No functions found in ${vscode.workspace.asRelativePath(configPath)}.`);
+    return;
   }
 
   const functions = allFunctions.filter((fn) => appliesToTargets(fn, workspaceFolder, targets));
   if (functions.length === 0) {
-    const matchPath = getMatchPath(targets[0], workspaceFolder);
-    throw new Error(`No functions match the selected path: ${matchPath}`);
+    return;
   }
 
   const picked = await pickFunction(functions);
@@ -239,7 +248,9 @@ async function loadConfig<T extends object>(configPath: string): Promise<T> {
     content = await fs.promises.readFile(configPath, 'utf8');
   } catch (error) {
     if (isNodeError(error) && error.code === 'ENOENT') {
-      throw new Error(`Missing config file: ${configPath}`);
+      const missingConfigError = new Error(`Missing config file: ${configPath}`) as NodeJS.ErrnoException;
+      missingConfigError.code = 'ENOENT';
+      throw missingConfigError;
     }
     throw error;
   }
