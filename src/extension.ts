@@ -119,31 +119,37 @@ async function setupExampleConfigs(context: vscode.ExtensionContext): Promise<vo
     }
   ];
 
-  const existingTargets = [];
+  const examplesToWrite = [];
   for (const example of examples) {
     if (await fileExists(example.target)) {
-      existingTargets.push(vscode.workspace.asRelativePath(example.target));
+      const overwrite = await vscode.window.showWarningMessage(
+        `Overwrite existing ObniCode config file? ${vscode.workspace.asRelativePath(example.target)}`,
+        { modal: true },
+        'Overwrite'
+      );
+
+      if (overwrite === 'Overwrite') {
+        examplesToWrite.push(example);
+      }
+    } else {
+      examplesToWrite.push(example);
     }
   }
 
-  if (existingTargets.length > 0) {
-    const overwrite = await vscode.window.showWarningMessage(
-      `Overwrite existing ObniCode config file(s)? ${existingTargets.join(', ')}`,
-      { modal: true },
-      'Overwrite'
-    );
-
-    if (overwrite !== 'Overwrite') {
-      return;
-    }
+  if (examplesToWrite.length === 0) {
+    vscode.window.showInformationMessage('ObniCode example configuration files already exist.');
+    return;
   }
 
-  for (const example of examples) {
+  for (const example of examplesToWrite) {
     await fs.promises.mkdir(path.dirname(example.target), { recursive: true });
     await fs.promises.copyFile(example.source, example.target);
   }
 
-  vscode.window.showInformationMessage('ObniCode example configuration files created.');
+  const createdTargets = examplesToWrite
+    .map((example) => vscode.workspace.asRelativePath(example.target))
+    .join(', ');
+  vscode.window.showInformationMessage(`ObniCode example configuration files written: ${createdTargets}`);
 }
 
 async function runShellFunction(
