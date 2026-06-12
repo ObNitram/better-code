@@ -5,3 +5,5 @@ src
 .git
 .DS_Store
 tsconfig.json
+*.zip
+*.vsix

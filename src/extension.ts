@@ -68,7 +68,7 @@ interface DiskUsage {
 
 export function activate(context: vscode.ExtensionContext): void {
   const disposable = vscode.commands.registerCommand(
-    'yamlShellContextActions.run',
+    'obnicode.run',
     async (resourceUri?: vscode.Uri, selectedUris?: vscode.Uri[]) => {
       try {
         await runShellFunction(resourceUri, selectedUris);
@@ -236,7 +236,7 @@ function getConfiguredPath(
   defaultPath: string
 ): string {
   const configured = vscode.workspace
-    .getConfiguration('yamlShellContextActions')
+    .getConfiguration('obnicode')
     .get<string>(settingName, defaultPath);
 
   return path.resolve(workspaceFolder.uri.fsPath, configured || defaultPath);
@@ -485,7 +485,7 @@ function startSystemStatusBar(context: vscode.ExtensionContext): void {
 
     updating = true;
     try {
-      const configuration = vscode.workspace.getConfiguration('yamlShellContextActions.systemStatus');
+      const configuration = vscode.workspace.getConfiguration('obnicode.systemStatus');
       const enabled = configuration.get<boolean>('enabled', true);
 
       if (!enabled) {
@@ -525,7 +525,7 @@ function startSystemStatusBar(context: vscode.ExtensionContext): void {
   const intervalMs = Math.max(
     1000,
     vscode.workspace
-      .getConfiguration('yamlShellContextActions.systemStatus')
+      .getConfiguration('obnicode.systemStatus')
       .get<number>('updateIntervalMs', 3000)
   );
   const interval = setInterval(update, intervalMs);
@@ -587,7 +587,7 @@ function getMemoryUsage(): { used: number; total: number } {
 
 function getConfiguredDiskPath(): string {
   const configured = vscode.workspace
-    .getConfiguration('yamlShellContextActions.systemStatus')
+    .getConfiguration('obnicode.systemStatus')
     .get<string>('diskPath', '');
 
   if (configured.trim()) {

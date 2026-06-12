@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://yaml-shell-context-actions.local/schemas/functions.schema.json",
-  "title": "YAML Shell Context Actions functions configuration",
+  "$id": "https://obnicode.local/schemas/functions.schema.json",
+  "title": "ObniCode functions configuration",
   "description": "Defines shell functions available from the VS Code Explorer right-click menu.",
   "type": "object",
   "additionalProperties": false,

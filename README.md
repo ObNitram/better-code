@@ -1,4 +1,4 @@
-# YAML Shell Context Actions
+# ObniCode
 
 VS Code extension that adds a **Context Actions** submenu to the Explorer right-click menu for files and folders.
 
@@ -139,11 +139,11 @@ The extension also shows a status bar item with:
 
 Settings:
 
-- `yamlShellContextActions.functionsConfigFile`: workspace-relative path to the functions YAML file, default `.vscode/functions.yaml`
-- `yamlShellContextActions.formattersConfigFile`: workspace-relative path to the formatters YAML file, default `.vscode/formatters.yaml`
-- `yamlShellContextActions.systemStatus.enabled`: show or hide the item
-- `yamlShellContextActions.systemStatus.updateIntervalMs`: refresh interval, default `3000`
-- `yamlShellContextActions.systemStatus.diskPath`: path used to measure storage, default first workspace folder
+- `obnicode.functionsConfigFile`: workspace-relative path to the functions YAML file, default `.vscode/functions.yaml`
+- `obnicode.formattersConfigFile`: workspace-relative path to the formatters YAML file, default `.vscode/formatters.yaml`
+- `obnicode.systemStatus.enabled`: show or hide the item
+- `obnicode.systemStatus.updateIntervalMs`: refresh interval, default `3000`
+- `obnicode.systemStatus.diskPath`: path used to measure storage, default first workspace folder
 
 ## Schema
 
@@ -169,3 +169,13 @@ Validated shape:
 4. Press `F5` to start an Extension Development Host.
 5. In the test workspace, create `.vscode/functions.yaml` and/or `.vscode/formatters.yaml`.
 6. Right-click a file or folder in the Explorer and choose **Context Actions > Choose Action...**.
+
+## Build VSIX
+
+Run:
+
+```bash
+npm run build:vsix
+```
+
+The script runs `npm run check`, then `npm run compile`, then `vsce package`.

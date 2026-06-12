@@ -1,8 +1,8 @@
 {
-  "name": "yaml-shell-context-actions",
-  "displayName": "YAML Shell Context Actions",
+  "name": "obnicode",
+  "displayName": "ObniCode",
   "description": "Execute YAML-defined context actions and document formatters.",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "publisher": "local",
   "engines": {
     "vscode": "^1.90.0"
@@ -12,33 +12,33 @@
   ],
   "activationEvents": [
     "onStartupFinished",
-    "onCommand:yamlShellContextActions.run"
+    "onCommand:obnicode.run"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "yamlShellContextActions.run",
+        "command": "obnicode.run",
         "title": "Choose Action...",
         "category": "Context Actions"
       }
     ],
     "submenus": [
       {
-        "id": "yamlShellContextActions.functionsMenu",
+        "id": "obnicode.functionsMenu",
         "label": "Context Actions"
       }
     ],
     "menus": {
       "explorer/context": [
         {
-          "submenu": "yamlShellContextActions.functionsMenu",
+          "submenu": "obnicode.functionsMenu",
           "group": "navigation@90"
         }
       ],
-      "yamlShellContextActions.functionsMenu": [
+      "obnicode.functionsMenu": [
         {
-          "command": "yamlShellContextActions.run",
+          "command": "obnicode.run",
           "group": "navigation@1"
         }
       ]
@@ -62,30 +62,30 @@
       }
     ],
     "configuration": {
-      "title": "YAML Shell Context Actions",
+      "title": "ObniCode",
       "properties": {
-        "yamlShellContextActions.functionsConfigFile": {
+        "obnicode.functionsConfigFile": {
           "type": "string",
           "default": ".vscode/functions.yaml",
           "description": "Workspace-relative YAML configuration file containing Explorer context shell functions."
         },
-        "yamlShellContextActions.formattersConfigFile": {
+        "obnicode.formattersConfigFile": {
           "type": "string",
           "default": ".vscode/formatters.yaml",
           "description": "Workspace-relative YAML configuration file containing document formatter commands."
         },
-        "yamlShellContextActions.systemStatus.enabled": {
+        "obnicode.systemStatus.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Show CPU, memory, and storage usage in the VS Code status bar."
         },
-        "yamlShellContextActions.systemStatus.updateIntervalMs": {
+        "obnicode.systemStatus.updateIntervalMs": {
           "type": "number",
           "default": 3000,
           "minimum": 1000,
           "description": "Refresh interval in milliseconds for the system status bar item."
         },
-        "yamlShellContextActions.systemStatus.diskPath": {
+        "obnicode.systemStatus.diskPath": {
           "type": "string",
           "default": "",
           "description": "Path used to determine storage usage. Defaults to the first workspace folder, or the user home directory when no workspace is open."
@@ -97,6 +97,9 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "tsc --noEmit -p ./",
+    "validate:json": "node -e \"const fs=require('fs'); for (const file of ['package.json','package-lock.json','schemas/functions.schema.json','schemas/formatters.schema.json']) JSON.parse(fs.readFileSync(file,'utf8'));\"",
+    "check": "npm run lint && npm run validate:json",
+    "build:vsix": "npm run check && npm run compile && vsce package",
     "vscode:prepublish": "npm run compile"
   },
   "dependencies": {
@@ -105,6 +108,7 @@
   "devDependencies": {
     "@types/node": "^20.14.2",
     "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.9.2",
     "typescript": "^5.4.5"
   }
 }
