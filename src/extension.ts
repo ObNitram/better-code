@@ -796,38 +796,62 @@ function startSystemStatusBar(context: vscode.ExtensionContext): void {
         return;
       }
 
-      const cpu = getCpuUsage(previousCpu);
-      previousCpu = cpu.snapshot;
+      const showCpu = configuration.get<boolean>('showCpu', true);
+      const showFrequency = configuration.get<boolean>('showFrequency', true);
+      const showMemory = configuration.get<boolean>('showMemory', true);
+      const showDisk = configuration.get<boolean>('showDisk', true);
 
-      const memory = getMemoryUsage();
-      const disk = await getDiskUsage(getConfiguredDiskPath());
-      const frequency = getCpuFrequency();
-      const segments = [
-        getStableStatusSegment('cpu', `$(pulse) ${formatPercent(cpu.percent)}`, segmentWidths),
-        getStableStatusSegment('frequency', `$(dashboard) ${frequency}`, segmentWidths),
-        getStableStatusSegment(
-          'memory',
-          `$(ellipsis) ${formatBytes(memory.used)}/${formatBytes(memory.total)}`,
-          segmentWidths
-        ),
-        getStableStatusSegment(
-          'disk',
-          `$(database) ${disk ? `${formatBytes(disk.used)}/${formatBytes(disk.total)} used` : '--'}`,
-          segmentWidths
-        )
-      ];
+      const cpu = showCpu || showFrequency ? getCpuUsage(previousCpu) : null;
+      if (cpu) {
+        previousCpu = cpu.snapshot;
+      }
 
-      item.text = segments.join('    ');
+      const memory = showMemory ? getMemoryUsage() : null;
+      const disk = showDisk ? await getDiskUsage(getConfiguredDiskPath()) : null;
+      const frequency = showFrequency ? getCpuFrequency() : null;
+      const frequencyAvailable = frequency !== null && frequency !== '--';
 
-      item.tooltip = [
-        'ObniCode system status',
-        `CPU usage: ${formatPercent(cpu.percent)}`,
-        `CPU frequency: ${frequency}`,
-        `RAM used: ${formatBytes(memory.used)} / ${formatBytes(memory.total)}`,
-        disk
+      const visibleSegments: string[] = [];
+
+      if (showCpu && cpu) {
+        visibleSegments.push(getStableStatusSegment('cpu', `$(pulse) ${formatPercent(cpu.percent)}`, segmentWidths));
+      }
+
+      if (frequencyAvailable && frequency) {
+        visibleSegments.push(getStableStatusSegment('frequency', `$(dashboard) ${frequency}`, segmentWidths));
+      }
+
+      if (showMemory && memory) {
+        visibleSegments.push(
+          getStableStatusSegment('memory', `$(ellipsis) ${formatBytes(memory.used)}/${formatBytes(memory.total)}`, segmentWidths)
+        );
+      }
+
+      if (showDisk && disk) {
+        visibleSegments.push(
+          getStableStatusSegment('disk', `$(database) ${formatBytes(disk.used)}/${formatBytes(disk.total)} used`, segmentWidths)
+        );
+      }
+
+      item.text = visibleSegments.join('    ');
+
+      const tooltipLines: string[] = ['ObniCode system status'];
+      if (showCpu && cpu) {
+        tooltipLines.push(`CPU usage: ${formatPercent(cpu.percent)}`);
+      }
+      if (showFrequency) {
+        tooltipLines.push(`CPU frequency: ${frequency ?? '--'}`);
+      }
+      if (showMemory && memory) {
+        tooltipLines.push(`RAM used: ${formatBytes(memory.used)} / ${formatBytes(memory.total)}`);
+      }
+      if (showDisk) {
+        tooltipLines.push(disk
           ? `Storage used: ${formatBytes(disk.used)} / ${formatBytes(disk.total)}`
           : 'Storage used: unavailable'
-      ].join('\n');
+        );
+      }
+      item.tooltip = tooltipLines.join('\n');
 
       item.show();
     } finally {

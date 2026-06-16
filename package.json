@@ -182,7 +182,27 @@
         "obnicode.systemStatus.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Show CPU, memory, and storage usage in the VS Code status bar."
+          "description": "Show system usage information in the VS Code status bar."
+        },
+        "obnicode.systemStatus.showCpu": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show CPU usage in the status bar and tooltip."
+        },
+        "obnicode.systemStatus.showFrequency": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show CPU frequency in the status bar and tooltip."
+        },
+        "obnicode.systemStatus.showMemory": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show RAM usage in the status bar and tooltip."
+        },
+        "obnicode.systemStatus.showDisk": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show storage usage in the status bar and tooltip."
         },
         "obnicode.systemStatus.updateIntervalMs": {
           "type": "number",

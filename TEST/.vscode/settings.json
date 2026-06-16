@@ -25,7 +25,7 @@
     "obnicode.formatters": [
         {
             "language": "json",
-            "command": "jq .",
+            "commanerwd": "jq .",
             
         }
     ]
