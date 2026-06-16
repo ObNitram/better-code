@@ -3,9 +3,6 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { parse as parseYaml } from 'yaml';
-
-const DEFAULT_CONFIG_FILE = '.vscode/obnicode.yaml';
 
 interface ExplorerViewActionConfig {
   name?: unknown;
@@ -32,12 +29,6 @@ interface BackgroundTaskConfig {
   outputChannel?: unknown;
   terminalName?: unknown;
   useTerminal?: unknown;
-}
-
-interface ObniCodeConfig {
-  explorerViewActions?: unknown;
-  backgroundTasks?: unknown;
-  formatters?: unknown;
 }
 
 interface MatchableConfig {
@@ -133,32 +124,62 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 }
 
-async function setupExampleConfigs(context: vscode.ExtensionContext): Promise<void> {
+async function setupExampleConfigs(_context: vscode.ExtensionContext): Promise<void> {
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
   if (!workspaceFolder) {
     throw new Error('Open a workspace folder before setting up ObniCode examples.');
   }
 
-  const source = path.join(context.extensionPath, 'examples', 'obnicode.yaml');
-  const target = getConfigPath(workspaceFolder);
-  const relativeTarget = vscode.workspace.asRelativePath(target);
+  const config = vscode.workspace.getConfiguration('obnicode', workspaceFolder.uri);
+  const existingActions = config.get<unknown[]>('explorerViewActions', []);
 
-  if (await fileExists(target)) {
+  if (existingActions.length > 0) {
     const overwrite = await vscode.window.showWarningMessage(
-      `Overwrite existing ObniCode config file? ${relativeTarget}`,
+      'ObniCode settings already exist. Overwrite them?',
       { modal: true },
       'Overwrite'
     );
 
     if (overwrite !== 'Overwrite') {
-      vscode.window.showInformationMessage(`ObniCode example configuration already exists: ${relativeTarget}`);
+      vscode.window.showInformationMessage('ObniCode example configuration already exists.');
       return;
     }
   }
 
-  await fs.promises.mkdir(path.dirname(target), { recursive: true });
-  await fs.promises.copyFile(source, target);
-  vscode.window.showInformationMessage(`ObniCode example configuration written: ${relativeTarget}`);
+  await config.update('explorerViewActions', [
+    {
+      name: 'Print selected path',
+      description: 'Echo the selected file or folder path',
+      command: 'echo ${path}',
+      useTerminal: false
+    },
+    {
+      name: 'List files',
+      description: 'List files in the selected folder',
+      command: 'ls -la ${rawPath}',
+      useTerminal: true,
+      match: '.*'
+    }
+  ], vscode.ConfigurationTarget.WorkspaceFolder);
+
+  await config.update('backgroundTasks', [
+    {
+      name: 'Print workspace at startup',
+      command: 'echo ${rawWorkspaceFolder}',
+      outputChannel: 'obnicode.backgroundTasks',
+      useTerminal: false
+    }
+  ], vscode.ConfigurationTarget.WorkspaceFolder);
+
+  await config.update('formatters', [
+    {
+      language: 'json',
+      command: 'jq .',
+      match: '\\.json$'
+    }
+  ], vscode.ConfigurationTarget.WorkspaceFolder);
+
+  vscode.window.showInformationMessage('ObniCode example settings added to workspace settings.');
 }
 
 async function startBackgroundTasks(context: vscode.ExtensionContext): Promise<void> {
@@ -183,22 +204,9 @@ async function startBackgroundTasks(context: vscode.ExtensionContext): Promise<v
   const startupOutput = getOutputChannel('obnicode.backgroundTasks');
 
   for (const workspaceFolder of workspaceFolders) {
-    let config: ObniCodeConfig;
-    try {
-      config = await loadConfig<ObniCodeConfig>(getConfigPath(workspaceFolder));
-    } catch (error) {
-      if (isNodeError(error) && error.code === 'ENOENT') {
-        continue;
-      }
-
-      const message = error instanceof Error ? error.message : String(error);
-      startupOutput.appendLine(
-        `[${new Date().toISOString()}] ERROR ${workspaceFolder.name} failed to load background tasks: ${message}`
-      );
-      continue;
-    }
-
-    const tasks = normalizeBackgroundTasks(config.backgroundTasks);
+    const tasks = normalizeBackgroundTasks(
+      vscode.workspace.getConfiguration('obnicode', workspaceFolder.uri).get('backgroundTasks')
+    );
     if (tasks.length === 0) {
       continue;
     }
@@ -311,19 +319,9 @@ async function runExplorerViewAction(
     throw new Error('The selected item is not inside an open workspace.');
   }
 
-  const configPath = getConfigPath(workspaceFolder);
-  let config: ObniCodeConfig;
-  try {
-    config = await loadConfig<ObniCodeConfig>(configPath);
-  } catch (error) {
-    if (isNodeError(error) && error.code === 'ENOENT') {
-      return;
-    }
-
-    throw error;
-  }
-
-  const allActions = normalizeExplorerViewActions(config.explorerViewActions);
+  const allActions = normalizeExplorerViewActions(
+    vscode.workspace.getConfiguration('obnicode', workspaceFolder.uri).get('explorerViewActions')
+  );
 
   if (allActions.length === 0) {
     return;
@@ -376,7 +374,7 @@ async function runExplorerViewAction(
 }
 
 class ConfiguredFormattingProvider implements vscode.DocumentFormattingEditProvider {
-  constructor(private readonly output: vscode.OutputChannel) {}
+  constructor(private readonly output: vscode.OutputChannel) { }
 
   async provideDocumentFormattingEdits(
     document: vscode.TextDocument,
@@ -388,21 +386,9 @@ class ConfiguredFormattingProvider implements vscode.DocumentFormattingEditProvi
       return [];
     }
 
-    let config: ObniCodeConfig;
-    try {
-      config = await loadConfig<ObniCodeConfig>(getConfigPath(workspaceFolder));
-    } catch (error) {
-      if (isNodeError(error) && error.code === 'ENOENT') {
-        return [];
-      }
-
-      const message = error instanceof Error ? error.message : String(error);
-      this.logFormatterEvent('ERROR', document, workspaceFolder, message);
-      return [];
-    }
-
-    const formatter = normalizeFormatters(config.formatters)
-      .find((candidate) => appliesToDocument(candidate, workspaceFolder, document));
+    const formatter = normalizeFormatters(
+      vscode.workspace.getConfiguration('obnicode', workspaceFolder.uri).get('formatters')
+    ).find((candidate) => appliesToDocument(candidate, workspaceFolder, document));
 
     if (!formatter) {
       return [];
@@ -468,37 +454,6 @@ function getTargets(resourceUri?: vscode.Uri, selectedUris?: vscode.Uri[]): vsco
       : [];
 
   return candidates.filter((uri) => uri.scheme === 'file');
-}
-
-function getConfigPath(workspaceFolder: vscode.WorkspaceFolder): string {
-  const configured = vscode.workspace
-    .getConfiguration('obnicode')
-    .get<string>('configFile', DEFAULT_CONFIG_FILE);
-
-  return path.resolve(workspaceFolder.uri.fsPath, configured || DEFAULT_CONFIG_FILE);
-}
-
-async function loadConfig<T extends object>(configPath: string): Promise<T> {
-  const content = await fs.promises.readFile(configPath, 'utf8');
-  const parsed = parseYaml(content);
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error(`Invalid config file: ${configPath}`);
-  }
-
-  return parsed as T;
-}
-
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.promises.access(filePath, fs.constants.F_OK);
-    return true;
-  } catch (error) {
-    if (isNodeError(error) && error.code === 'ENOENT') {
-      return false;
-    }
-
-    throw error;
-  }
 }
 
 function normalizeExplorerViewActions(value: unknown): ExplorerViewAction[] {
@@ -1023,8 +978,4 @@ function stringValue(value: unknown): string {
   return value === undefined || value === null ? '' : String(value);
 }
 
-function isNodeError(error: unknown): error is NodeJS.ErrnoException {
-  return error instanceof Error && 'code' in error;
-}
-
-export function deactivate(): void {}
+export function deactivate(): void { }

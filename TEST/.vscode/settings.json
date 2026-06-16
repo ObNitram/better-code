@@ -1,0 +1,32 @@
+{
+    "obnicode.explorerViewActions": [
+        {
+            "name": "Print selected path",
+            "description": "Echo the selected file or folder path",
+            "command": "echo ${path}",
+            "useTerminal": false
+        },
+        {
+            "name": "List files",
+            "description": "List files in the selected folder",
+            "command": "ls -la ${rawPath}",
+            "useTerminal": true,
+            "match": ".*"
+        }
+    ],
+    "obnicode.backgroundTasks": [
+        {
+            "name": "Print workspace at startup",
+            "command": "echo ${rawWorkspaceFolder}",
+            "outputChannel": "obnicode.backgroundTasks",
+            "useTerminal": false
+        }
+    ],
+    "obnicode.formatters": [
+        {
+            "language": "json",
+            "command": "jq .",
+            
+        }
+    ]
+}

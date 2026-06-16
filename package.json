@@ -1,7 +1,7 @@
 {
   "name": "obnicode",
   "displayName": "ObniCode",
-  "description": "Execute YAML-defined Explorer view actions, startup background tasks, and document formatters.",
+  "description": "Configure Explorer view actions, startup background tasks, and document formatters via VS Code settings.",
   "version": "0.1.0",
   "publisher": "local",
   "engines": {
@@ -12,9 +12,7 @@
   ],
   "icon": "images/icon.png",
   "activationEvents": [
-    "onStartupFinished",
-    "onCommand:obnicode.run",
-    "onCommand:obnicode.setupExample"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -44,23 +42,142 @@
         }
       ]
     },
-    "yamlValidation": [
-      {
-        "fileMatch": ".vscode/obnicode.yaml",
-        "url": "./schemas/obnicode.schema.json"
-      },
-      {
-        "fileMatch": "**/.vscode/obnicode.yaml",
-        "url": "./schemas/obnicode.schema.json"
-      }
-    ],
     "configuration": {
       "title": "ObniCode",
       "properties": {
-        "obnicode.configFile": {
-          "type": "string",
-          "default": ".vscode/obnicode.yaml",
-          "description": "Workspace-relative YAML configuration file containing Explorer view actions, startup background tasks, and document formatter commands."
+        "obnicode.explorerViewActions": {
+          "type": "array",
+          "scope": "resource",
+          "default": [],
+          "markdownDescription": "Shell actions shown in the Explorer view right-click command picker.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "command"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Display name shown in the VS Code Quick Pick."
+              },
+              "description": {
+                "type": "string",
+                "description": "Optional short description shown next to the action name."
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Shell command executed for this action. Supports template variables such as ${path}, ${workspaceFolder}, and ${selectedType}."
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Working directory for the command. Defaults to ${rawWorkspaceFolder}."
+              },
+              "match": {
+                "type": "string",
+                "description": "Optional JavaScript regular expression. The action is only shown when every selected path matches. Example: ^src/.*\\.ts$"
+              },
+              "terminalName": {
+                "type": "string",
+                "description": "Optional integrated terminal name when useTerminal is true. Defaults to the action name."
+              },
+              "useTerminal": {
+                "type": "boolean",
+                "default": false,
+                "description": "Run the command in a VS Code integrated terminal instead of the output channel."
+              }
+            }
+          }
+        },
+        "obnicode.backgroundTasks": {
+          "type": "array",
+          "scope": "resource",
+          "default": [],
+          "markdownDescription": "Workspace startup tasks launched when the extension activates.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "command"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Display name used in background task logs."
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Shell command launched when the extension activates. Supports template variables such as ${rawWorkspaceFolder}."
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Working directory for the command. Defaults to ${rawWorkspaceFolder}."
+              },
+              "outputChannel": {
+                "type": "string",
+                "minLength": 1,
+                "description": "VS Code output channel name for stdout/stderr. Required unless useTerminal is true."
+              },
+              "terminalName": {
+                "type": "string",
+                "description": "Optional integrated terminal name when useTerminal is true. Defaults to the task name."
+              },
+              "useTerminal": {
+                "type": "boolean",
+                "default": false,
+                "description": "Run the command in a VS Code integrated terminal instead of the configured output channel."
+              }
+            }
+          }
+        },
+        "obnicode.formatters": {
+          "type": "array",
+          "scope": "resource",
+          "default": [],
+          "markdownDescription": "Document formatters. The command receives the document content on stdin and must write the formatted content to stdout.",
+          "items": {
+            "type": "object",
+            "required": [
+              "command"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "type": "string",
+                "minLength": 1,
+                "description": "VS Code language id handled by this formatter, such as typescript, json, or python."
+              },
+              "languages": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "description": "VS Code language ids handled by this formatter.",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Shell command used as a formatter. Receives the document content on stdin and must print the formatted content to stdout."
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Working directory for the formatter command. Defaults to ${rawWorkspaceFolder}."
+              },
+              "match": {
+                "type": "string",
+                "description": "Optional JavaScript regular expression tested against the workspace-relative path. Example: ^src/.*\\.ts$"
+              }
+            }
+          }
         },
         "obnicode.systemStatus.enabled": {
           "type": "boolean",
@@ -85,14 +202,10 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "tsc --noEmit -p ./",
-    "validate:json": "node -e \"const fs=require('fs'); for (const file of ['package.json','package-lock.json','schemas/obnicode.schema.json']) JSON.parse(fs.readFileSync(file,'utf8'));\"",
-    "validate:examples": "node -e \"const fs=require('fs'); const YAML=require('yaml'); const parsed=YAML.parse(fs.readFileSync('examples/obnicode.yaml','utf8')); if (!parsed || typeof parsed !== 'object') throw new Error('examples/obnicode.yaml');\"",
-    "check": "npm run lint && npm run validate:json && npm run validate:examples",
+    "validate:json": "node -e \"const fs=require('fs'); for (const file of ['package.json','package-lock.json']) JSON.parse(fs.readFileSync(file,'utf8'));\"",
+    "check": "npm run lint && npm run validate:json",
     "build:vsix": "npm run check && npm run compile && vsce package",
     "vscode:prepublish": "npm run compile"
-  },
-  "dependencies": {
-    "yaml": "^2.5.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.2",
