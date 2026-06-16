@@ -4,6 +4,11 @@
   "description": "Configure Explorer view actions, startup background tasks, and document formatters via VS Code settings.",
   "version": "0.1.0",
   "publisher": "local",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ObNitram/better-code.git"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
