@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { startBackgroundTasks } from './backgroundTasks';
 import { runExplorerViewAction } from './explorerViewActions';
-import { ConfiguredFormattingProvider } from './formatters';
+import { ConfiguredFormattingProvider, normalizeFormatters } from './formatters';
 import { setupExampleConfigs } from './setup';
 import { startSystemStatusBar } from './systemStatus';
 
@@ -33,15 +33,11 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   );
 
-  const formattingProvider = vscode.languages.registerDocumentFormattingEditProvider(
-    { scheme: 'file' },
-    new ConfiguredFormattingProvider(formatterOutput)
-  );
+  startFormattingProviders(context, formatterOutput);
 
   context.subscriptions.push(
     runExplorerViewActionCommand,
     setupExampleCommand,
-    formattingProvider,
     formatterOutput,
     explorerViewActionOutput
   );
@@ -57,3 +53,64 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 export function deactivate(): void {}
+
+function startFormattingProviders(context: vscode.ExtensionContext, formatterOutput: vscode.OutputChannel): void {
+  let registrations: vscode.Disposable[] = [];
+
+  const refresh = (): void => {
+    for (const registration of registrations) {
+      registration.dispose();
+    }
+
+    registrations = getConfiguredFormatterLanguages().map((language) =>
+      vscode.languages.registerDocumentFormattingEditProvider(
+        { scheme: 'file', language },
+        new ConfiguredFormattingProvider(formatterOutput)
+      )
+    );
+  };
+
+  refresh();
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration('obnicode.formatters')) {
+        refresh();
+      }
+    }),
+    vscode.workspace.onDidChangeWorkspaceFolders(refresh),
+    {
+      dispose: () => {
+        for (const registration of registrations) {
+          registration.dispose();
+        }
+      }
+    }
+  );
+}
+
+function getConfiguredFormatterLanguages(): string[] {
+  const languages = new Set<string>();
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    addConfiguredFormatterLanguages(languages, vscode.workspace.getConfiguration('obnicode').get('formatters'));
+  } else {
+    for (const folder of workspaceFolders) {
+      addConfiguredFormatterLanguages(
+        languages,
+        vscode.workspace.getConfiguration('obnicode', folder.uri).get('formatters')
+      );
+    }
+  }
+
+  return [...languages].sort();
+}
+
+function addConfiguredFormatterLanguages(languages: Set<string>, value: unknown): void {
+  for (const formatter of normalizeFormatters(value)) {
+    for (const language of formatter.languages) {
+      languages.add(language);
+    }
+  }
+}
