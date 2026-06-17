@@ -3,7 +3,7 @@
   "displayName": "ObniCode",
   "description": "Configure Explorer view actions, startup background tasks, and document formatters via VS Code settings.",
   "version": "0.1.0",
-  "publisher": "local",
+  "publisher": "ObNitram",
   "license": "MIT",
   "repository": {
     "type": "git",
