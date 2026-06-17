@@ -219,10 +219,17 @@ Validated shape:
 
 1. Open this folder in VS Code.
 2. Run `npm install`.
-3. Run `npm run compile`.
-4. Press `F5` to start an Extension Development Host.
-5. In the test workspace, run **ObniCode: Setup ObniCode Example** or create `.vscode/obnicode.yaml`.
-6. Right-click a file or folder in the Explorer and choose **Run Explorer View Action**.
+3. Run `npm run setup:hooks`.
+4. Run `npm run compile`.
+5. Press `F5` to start an Extension Development Host.
+6. In the test workspace, run **ObniCode: Setup ObniCode Example** or create `.vscode/obnicode.yaml`.
+7. Right-click a file or folder in the Explorer and choose **Run Explorer View Action**.
+
+## Git Hooks
+
+Run `npm run setup:hooks` to use the tracked hooks in `.githooks/`.
+
+The `pre-push` hook rejects tags named `vX.X.X` when `X.X.X` does not match `package.json` `version`.
 
 ## Build VSIX
 

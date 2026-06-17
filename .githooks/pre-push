@@ -1,0 +1,57 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+
+const semverTagRefPattern = /^refs\/tags\/v(\d+\.\d+\.\d+)$/;
+const deletedRefShaPattern = /^0{40}$/;
+const packageJsonPath = path.resolve(__dirname, '..', 'package.json');
+
+let packageVersion;
+try {
+  packageVersion = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')).version;
+} catch (error) {
+  console.error(`Cannot read package.json version: ${error.message}`);
+  process.exit(1);
+}
+
+if (typeof packageVersion !== 'string' || !packageVersion.trim()) {
+  console.error('Cannot validate tag: package.json version is missing.');
+  process.exit(1);
+}
+
+let failed = false;
+let input = '';
+process.stdin.setEncoding('utf8');
+
+process.stdin.on('data', (chunk) => {
+  input += chunk;
+});
+
+process.stdin.on('end', () => {
+  for (const line of input.split(/\r?\n/)) {
+    if (!line.trim()) {
+      continue;
+    }
+
+    const [localRef, localSha] = line.split(/\s+/);
+    if (deletedRefShaPattern.test(localSha)) {
+      continue;
+    }
+
+    const match = semverTagRefPattern.exec(localRef);
+    if (!match) {
+      continue;
+    }
+
+    const tagVersion = match[1];
+    if (tagVersion !== packageVersion) {
+      console.error(
+        `Refusing to push tag ${localRef}: tag version ${tagVersion} does not match package.json version ${packageVersion}.`
+      );
+      failed = true;
+    }
+  }
+
+  process.exit(failed ? 1 : 0);
+});

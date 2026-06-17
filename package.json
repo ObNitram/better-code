@@ -2,7 +2,7 @@
   "name": "obnicode",
   "displayName": "ObniCode",
   "description": "Configure Explorer view actions, startup background tasks, and document formatters via VS Code settings.",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "publisher": "ObNitram",
   "license": "MIT",
   "repository": {
@@ -230,6 +230,7 @@
     "validate:json": "node -e \"const fs=require('fs'); for (const file of ['package.json','package-lock.json']) JSON.parse(fs.readFileSync(file,'utf8'));\"",
     "check": "npm run lint && npm run validate:json",
     "build:vsix": "npm run check && npm run compile && vsce package",
+    "setup:hooks": "git config core.hooksPath .githooks",
     "vscode:prepublish": "npm run compile"
   },
   "devDependencies": {
