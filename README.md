@@ -75,16 +75,13 @@ The **ObniCode: Setup ObniCode Example** command adds example Explorer actions a
 
 You can also run npm run build:vsix to generate a VSIX file for testing in another VS Code instance.
 
-## Release
+## Release Workflow
 
-Run:
+Run the `npm run release` command to create a new release. It will:
 
-```text
-npm run release
-```
+- Update the version in package.json and package-lock.json.
+- Create a new git tag.
 
-The command prompts for a patch, minor, or major release and asks you to
-confirm that the changelog entry is correct. It requires a clean Git working
-tree and an existing `CHANGELOG.md` entry for the target version. It then
-updates the package versions, runs `npm run build:vsix`, creates a release
-commit, and adds an annotated tag named `vX.Y.Z`. It does not push anything.
+After that, you can push the changes and tag to GitHub, which will trigger a GitHub Actions workflow to public the release to github.
+
+After you can go to : https://marketplace.visualstudio.com/manage/publishers/obnitram and publish the release to the VS Code Marketplace.
