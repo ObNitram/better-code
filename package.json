@@ -1,7 +1,7 @@
 {
   "name": "obnicode",
   "displayName": "ObniCode",
-  "description": "Configure Explorer view actions, startup background tasks, and document formatters via VS Code settings.",
+  "description": "Configure Explorer view actions and document formatters via VS Code settings.",
   "version": "0.1.2",
   "publisher": "ObNitram",
   "license": "MIT",
@@ -93,50 +93,6 @@
                 "type": "boolean",
                 "default": false,
                 "description": "Run the command in a VS Code integrated terminal instead of the output channel."
-              }
-            }
-          }
-        },
-        "obnicode.backgroundTasks": {
-          "type": "array",
-          "scope": "resource",
-          "default": [],
-          "markdownDescription": "Workspace startup tasks launched when the extension activates.",
-          "items": {
-            "type": "object",
-            "required": [
-              "name",
-              "command"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "name": {
-                "type": "string",
-                "minLength": 1,
-                "description": "Display name used in background task logs."
-              },
-              "command": {
-                "type": "string",
-                "minLength": 1,
-                "description": "Shell command launched when the extension activates. Supports template variables such as ${rawWorkspaceFolder}."
-              },
-              "cwd": {
-                "type": "string",
-                "description": "Working directory for the command. Defaults to ${rawWorkspaceFolder}."
-              },
-              "outputChannel": {
-                "type": "string",
-                "minLength": 1,
-                "description": "VS Code output channel name for stdout/stderr. Required unless useTerminal is true."
-              },
-              "terminalName": {
-                "type": "string",
-                "description": "Optional integrated terminal name when useTerminal is true. Defaults to the task name."
-              },
-              "useTerminal": {
-                "type": "boolean",
-                "default": false,
-                "description": "Run the command in a VS Code integrated terminal instead of the configured output channel."
               }
             }
           }

@@ -38,15 +38,6 @@ export async function setupExampleConfigs(_context: vscode.ExtensionContext): Pr
     }
   ], vscode.ConfigurationTarget.WorkspaceFolder);
 
-  await config.update('backgroundTasks', [
-    {
-      name: 'Print workspace at startup',
-      command: 'echo ${rawWorkspaceFolder}',
-      outputChannel: 'obnicode.backgroundTasks',
-      useTerminal: false
-    }
-  ], vscode.ConfigurationTarget.WorkspaceFolder);
-
   await config.update('formatters', [
     {
       language: 'json',

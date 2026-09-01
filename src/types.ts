@@ -18,13 +18,4 @@ export interface Formatter extends MatchableConfig {
   cwd?: string;
 }
 
-export interface BackgroundTask {
-  name: string;
-  command: string;
-  cwd?: string;
-  outputChannel: string;
-  terminalName?: string;
-  useTerminal: boolean;
-}
-
 export type TemplateVariables = Record<string, string>;

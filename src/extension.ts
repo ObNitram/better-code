@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { startBackgroundTasks } from './backgroundTasks';
 import { runExplorerViewAction } from './explorerViewActions';
 import { ConfiguredFormattingProvider, normalizeFormatters } from './formatters';
 import { setupExampleConfigs } from './setup';
@@ -43,13 +42,6 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   startSystemStatusBar(context);
-
-  void startBackgroundTasks(context).catch((error) => {
-    const output = vscode.window.createOutputChannel('obnicode.backgroundTasks');
-    context.subscriptions.push(output);
-    const message = error instanceof Error ? error.message : String(error);
-    output.appendLine(`[${new Date().toISOString()}] ERROR failed to start background tasks: ${message}`);
-  });
 }
 
 export function deactivate(): void {}

@@ -14,19 +14,11 @@
             "match": ".*"
         }
     ],
-    "obnicode.backgroundTasks": [
-        {
-            "name": "Print workspace at startup",
-            "command": "echo ${rawWorkspaceFolder}",
-            "outputChannel": "obnicode.backgroundTasks",
-            "useTerminal": false
-        }
-    ],
     "obnicode.formatters": [
         {
             "language": "json",
-            "commanerwd": "jq .",
-            
+            "command": "jq .",
+            "match": "\\.json$"
         }
     ]
 }
