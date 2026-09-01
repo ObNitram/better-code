@@ -8,7 +8,7 @@ All notable changes to ObniCode are documented in this file.
 
 ### Added
 
-- GitHub Releases now use the changelog section matching the release version and link to the full changelog.
+- GitHub Releases now use the changelog section matching the release version, link to the full changelog, and compare the previous release tag.
 
 ## [2.0.0] - 2026-09-01
 

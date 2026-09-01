@@ -17,6 +17,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Verify tag matches package.json version
         run: |
@@ -46,6 +48,7 @@ jobs:
           TAG_VERSION: ${{ github.ref_name }}
         run: |
           VERSION="${TAG_VERSION#v}"
+          PREVIOUS_TAG=$(git tag --sort=-v:refname | grep -Fxv "$TAG_VERSION" | head -n 1 || true)
           awk -v version="$VERSION" '
             $0 ~ "^## \\[" version "\\]" { in_section = 1; next }
             in_section && /^## \[/ { exit }
@@ -61,6 +64,10 @@ jobs:
             cat release-notes.md
             printf '\n\n---\n\nFor the full changelog, see [CHANGELOG.md](https://github.com/%s/blob/%s/CHANGELOG.md).\n' \
               "$GITHUB_REPOSITORY" "$TAG_VERSION"
+            if [ -n "$PREVIOUS_TAG" ]; then
+              printf '\n**Full Changelog**: [%s...%s](https://github.com/%s/compare/%s...%s)\n' \
+                "$PREVIOUS_TAG" "$TAG_VERSION" "$GITHUB_REPOSITORY" "$PREVIOUS_TAG" "$TAG_VERSION"
+            fi
           } > release-body.md
 
       - name: Create GitHub Release
