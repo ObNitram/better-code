@@ -2,7 +2,7 @@
   "name": "obnicode",
   "displayName": "ObniCode",
   "description": "Configure Explorer view actions and document formatters via VS Code settings.",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "publisher": "ObNitram",
   "license": "MIT",
   "repository": {
