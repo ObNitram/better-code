@@ -73,10 +73,18 @@ The **ObniCode: Setup ObniCode Example** command adds example Explorer actions a
 5. Press `F5` to start the Extension Development Host.
 6. Run **ObniCode: Setup ObniCode Example** or configure the `obnicode.*` settings.
 
-## Build VSIX
+You can also run npm run build:vsix to generate a VSIX file for testing in another VS Code instance.
+
+## Release
+
+Run:
 
 ```text
-npm run build:vsix
+npm run release
 ```
 
-The command checks the project, compiles it, then generates the VSIX file.
+The command prompts for a patch, minor, or major release and asks you to
+confirm that the changelog entry is correct. It requires a clean Git working
+tree and an existing `CHANGELOG.md` entry for the target version. It then
+updates the package versions, runs `npm run build:vsix`, creates a release
+commit, and adds an annotated tag named `vX.Y.Z`. It does not push anything.
