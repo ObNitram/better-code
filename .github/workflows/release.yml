@@ -41,8 +41,30 @@ jobs:
       - name: Build VSIX
         run: npm run build:vsix
 
+      - name: Prepare release notes from changelog
+        env:
+          TAG_VERSION: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG_VERSION#v}"
+          awk -v version="$VERSION" '
+            $0 ~ "^## \\[" version "\\]" { in_section = 1; next }
+            in_section && /^## \[/ { exit }
+            in_section { print }
+          ' CHANGELOG.md > release-notes.md
+
+          if [ ! -s release-notes.md ]; then
+            echo "::error::No changelog entry found for version $VERSION"
+            exit 1
+          fi
+
+          {
+            cat release-notes.md
+            printf '\n\n---\n\nFor the full changelog, see [CHANGELOG.md](https://github.com/%s/blob/%s/CHANGELOG.md).\n' \
+              "$GITHUB_REPOSITORY" "$TAG_VERSION"
+          } > release-body.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           files: "*.vsix"
-          generate_release_notes: true
+          body_path: release-body.md
