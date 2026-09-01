@@ -61,9 +61,9 @@ jobs:
           fi
 
           {
-            cat release-notes.md
-            printf '\n\n---\n\nFor the full changelog, see [CHANGELOG.md](https://github.com/%s/blob/%s/CHANGELOG.md).\n' \
+            printf '*Auto-generated change from [CHANGELOG.md](https://github.com/%s/blob/%s/CHANGELOG.md)*\n\n' \
               "$GITHUB_REPOSITORY" "$TAG_VERSION"
+            cat release-notes.md
             if [ -n "$PREVIOUS_TAG" ]; then
               printf '\n**Full Changelog**: [%s...%s](https://github.com/%s/compare/%s...%s)\n' \
                 "$PREVIOUS_TAG" "$TAG_VERSION" "$GITHUB_REPOSITORY" "$PREVIOUS_TAG" "$TAG_VERSION"
